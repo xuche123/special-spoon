@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: pdfbox-service
+  config:
+    import: classpath:templates.yml
+
+# Surface validation messages (e.g. unknown template fields) in error responses.
+server:
+  error:
+    include-message: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

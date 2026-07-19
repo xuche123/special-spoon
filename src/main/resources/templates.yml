@@ -1,0 +1,30 @@
+# Registry of supported report templates. Adding a template means adding an entry here plus the
+# PDF under src/main/resources/templates/. The TemplateRegistry validates every entry at startup:
+#   - the PDF file must exist and load
+#   - PDFs with an AcroForm are filled by field name; declaring coordinate fields is an error
+#   - form-free PDFs must declare complete, in-bounds coordinate placements for every field
+pdf:
+  templates:
+    report:
+      file: classpath:templates/report.pdf
+    certificate:
+      file: classpath:templates/certificate.pdf
+      fields:
+        recipient:
+          page: 1
+          x: 180
+          y: 400
+          font-size: 28
+          max-width: 432
+        course:
+          page: 1
+          x: 180
+          y: 310
+          font-size: 18
+          max-width: 432
+        date:
+          page: 1
+          x: 235
+          y: 240
+          font-size: 12
+          max-width: 180
