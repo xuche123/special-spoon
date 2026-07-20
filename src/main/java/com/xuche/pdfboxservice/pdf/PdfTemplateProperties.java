@@ -46,11 +46,37 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
      * @param y baseline of the value, in points
      * @param fontSize default 12; shrunk proportionally if {@code maxWidth} is exceeded
      * @param maxWidth optional maximum rendered width in points
+     * @param type how to render the value; default {@link FieldType#TEXT}
+     * @param width signature box width in points; required for {@link FieldType#SIGNATURE},
+     *     forbidden otherwise
+     * @param height signature box height in points; same rule as {@code width}
      */
     public record FieldPlacement(
             @NotNull @Positive Integer page,
             @NotNull Float x,
             @NotNull Float y,
             @Positive Float fontSize,
-            @Positive Float maxWidth) {}
+            @Positive Float maxWidth,
+            FieldType type,
+            @Positive Float width,
+            @Positive Float height) {
+
+        public FieldPlacement {
+            if (type == null) {
+                type = FieldType.TEXT;
+            }
+        }
+    }
+
+    /** How an overlay field renders its value. */
+    public enum FieldType {
+        /** Draw the value as text, shrunk to {@code maxWidth} when configured. */
+        TEXT,
+        /** Draw an X at the coordinates when the value is boolean-ish true; nothing otherwise. */
+        CHECKBOX,
+        /**
+         * Stamp a drawn e-signature image, fitted inside the {@code width} x {@code height} box.
+         */
+        SIGNATURE
+    }
 }

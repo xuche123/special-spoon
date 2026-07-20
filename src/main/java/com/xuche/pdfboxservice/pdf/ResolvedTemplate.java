@@ -13,6 +13,7 @@ record ResolvedTemplate(
         Kind kind,
         byte[] pdfBytes,
         Set<String> knownFields,
+        Set<String> signatureFields,
         Map<String, PdfTemplateProperties.FieldPlacement> placements) {
 
     enum Kind {

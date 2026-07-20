@@ -20,7 +20,13 @@ class TemplateRegistryTest {
     }
 
     private static FieldPlacement placement(int page, Float x, Float y) {
-        return new FieldPlacement(page, x, y, null, null);
+        return new FieldPlacement(page, x, y, null, null, null, null, null);
+    }
+
+    private static FieldPlacement signaturePlacement(
+            int page, float x, float y, Float width, Float height) {
+        return new FieldPlacement(
+                page, x, y, null, null, PdfTemplateProperties.FieldType.SIGNATURE, width, height);
     }
 
     private static TemplateRegistry registryOf(Map<String, Template> templates) {
@@ -29,13 +35,80 @@ class TemplateRegistryTest {
     }
 
     @Test
-    void detectsAcroFormTemplatesAndTheirTextFields() {
+    void detectsAcroFormTemplatesAndTheirFillableFields() {
         TemplateRegistry registry = registryOf(Map.of("report", template(REPORT, Map.of())));
 
         ResolvedTemplate report = registry.get("report");
         assertThat(report.kind()).isEqualTo(ResolvedTemplate.Kind.ACROFORM);
+        // Text fields and checkboxes are fillable via fields; the signature field takes a
+        // drawn e-signature via signatures.
         assertThat(report.knownFields())
-                .containsExactlyInAnyOrder("title", "author", "date", "summary");
+                .containsExactlyInAnyOrder(
+                        "title",
+                        "author",
+                        "date",
+                        "summary",
+                        "confidential",
+                        "reviewed",
+                        "approved",
+                        "signed-by",
+                        "signature-date");
+        assertThat(report.signatureFields()).containsExactly("signature");
+    }
+
+    @Test
+    void detectsOverlaySignaturePlacements() {
+        TemplateRegistry registry =
+                registryOf(
+                        Map.of(
+                                "certificate",
+                                template(
+                                        CERTIFICATE,
+                                        Map.of(
+                                                "instructor-signature",
+                                                signaturePlacement(3, 500f, 340f, 180f, 60f)))));
+
+        ResolvedTemplate certificate = registry.get("certificate");
+        assertThat(certificate.signatureFields()).containsExactly("instructor-signature");
+        assertThat(certificate.knownFields()).isEmpty();
+    }
+
+    @Test
+    void failsWhenSignaturePlacementIsMissingSize() {
+        assertThatThrownBy(
+                        () ->
+                                registryOf(
+                                        Map.of(
+                                                "certificate",
+                                                template(
+                                                        CERTIFICATE,
+                                                        Map.of(
+                                                                "instructor-signature",
+                                                                signaturePlacement(
+                                                                        3, 500f, 340f, null,
+                                                                        60f))))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("instructor-signature")
+                .hasMessageContaining("width and height");
+    }
+
+    @Test
+    void failsWhenNonSignaturePlacementDeclaresWidth() {
+        assertThatThrownBy(
+                        () ->
+                                registryOf(
+                                        Map.of(
+                                                "certificate",
+                                                template(
+                                                        CERTIFICATE,
+                                                        Map.of(
+                                                                "recipient",
+                                                                new FieldPlacement(
+                                                                        1, 180f, 400f, null, null,
+                                                                        null, 100f, null))))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("recipient")
+                .hasMessageContaining("signature fields");
     }
 
     @Test

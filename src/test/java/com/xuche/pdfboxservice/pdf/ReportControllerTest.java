@@ -29,7 +29,7 @@ class ReportControllerTest {
     @Test
     void fillsTemplateAndReturnsPdf() throws Exception {
         byte[] pdf = "%PDF-1.7 fake".getBytes(StandardCharsets.UTF_8);
-        when(pdfReportService.fill(eq("report"), anyMap())).thenReturn(pdf);
+        when(pdfReportService.fill(eq("report"), anyMap(), anyMap())).thenReturn(pdf);
 
         mockMvc.perform(
                         post("/api/reports/report")
@@ -45,8 +45,21 @@ class ReportControllerTest {
     }
 
     @Test
+    void acceptsSignatures() throws Exception {
+        byte[] pdf = "%PDF-1.7 fake".getBytes(StandardCharsets.UTF_8);
+        when(pdfReportService.fill(eq("report"), anyMap(), anyMap())).thenReturn(pdf);
+
+        mockMvc.perform(
+                        post("/api/reports/report")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        "{\"fields\":{\"title\":\"Q3\"},\"signatures\":{\"signature\":\"data:image/png;base64,abc\"}}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void unknownTemplateReturns404() throws Exception {
-        when(pdfReportService.fill(eq("nope"), anyMap()))
+        when(pdfReportService.fill(eq("nope"), anyMap(), anyMap()))
                 .thenThrow(new TemplateNotFoundException("nope"));
 
         mockMvc.perform(
@@ -58,7 +71,7 @@ class ReportControllerTest {
 
     @Test
     void unknownFieldReturns400() throws Exception {
-        when(pdfReportService.fill(eq("report"), anyMap()))
+        when(pdfReportService.fill(eq("report"), anyMap(), anyMap()))
                 .thenThrow(
                         new UnknownTemplateFieldException(
                                 "report", Set.of("bogus"), Set.of("title")));

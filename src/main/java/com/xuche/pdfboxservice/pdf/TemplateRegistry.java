@@ -12,7 +12,9 @@ import java.util.regex.Pattern;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
+import org.apache.pdfbox.pdmodel.interactive.form.PDCheckBox;
 import org.apache.pdfbox.pdmodel.interactive.form.PDField;
+import org.apache.pdfbox.pdmodel.interactive.form.PDSignatureField;
 import org.apache.pdfbox.pdmodel.interactive.form.PDTextField;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -89,14 +91,24 @@ class TemplateRegistry {
                             "declares coordinate fields but the PDF has an AcroForm; remove the"
                                     + " fields, AcroForm templates are filled by field name");
                 }
+                // Text fields and checkboxes are fillable via fields; signature fields accept a
+                // drawn e-signature image via signatures.
                 Set<String> knownFields = new TreeSet<>();
+                Set<String> signatureFields = new TreeSet<>();
                 for (PDField field : form.getFieldTree()) {
-                    if (field instanceof PDTextField) {
+                    if (field instanceof PDTextField || field instanceof PDCheckBox) {
                         knownFields.add(field.getFullyQualifiedName());
+                    } else if (field instanceof PDSignatureField) {
+                        signatureFields.add(field.getFullyQualifiedName());
                     }
                 }
                 return new ResolvedTemplate(
-                        name, ResolvedTemplate.Kind.ACROFORM, pdfBytes, knownFields, Map.of());
+                        name,
+                        ResolvedTemplate.Kind.ACROFORM,
+                        pdfBytes,
+                        knownFields,
+                        signatureFields,
+                        Map.of());
             }
 
             if (template.fields().isEmpty()) {
@@ -107,18 +119,26 @@ class TemplateRegistry {
                                 + ".fields");
             }
             Map<String, PdfTemplateProperties.FieldPlacement> placements = new LinkedHashMap<>();
+            Set<String> knownFields = new TreeSet<>();
+            Set<String> signatureFields = new TreeSet<>();
             for (Map.Entry<String, PdfTemplateProperties.FieldPlacement> field :
                     template.fields().entrySet()) {
-                placements.put(
-                        field.getKey(),
+                PdfTemplateProperties.FieldPlacement placement =
                         validatePlacement(
-                                field.getKey(), field.getValue(), document.getNumberOfPages()));
+                                field.getKey(), field.getValue(), document.getNumberOfPages());
+                placements.put(field.getKey(), placement);
+                if (placement.type() == PdfTemplateProperties.FieldType.SIGNATURE) {
+                    signatureFields.add(field.getKey());
+                } else {
+                    knownFields.add(field.getKey());
+                }
             }
             return new ResolvedTemplate(
                     name,
                     ResolvedTemplate.Kind.OVERLAY,
                     pdfBytes,
-                    Set.copyOf(placements.keySet()),
+                    knownFields,
+                    signatureFields,
                     Map.copyOf(placements));
         } catch (IOException e) {
             throw new UncheckedIOException("failed to parse " + template.file(), e);
@@ -148,6 +168,24 @@ class TemplateRegistry {
         }
         if (placement.maxWidth() != null && placement.maxWidth() <= 0) {
             throw new IllegalStateException("field '" + fieldName + "': maxWidth must be positive");
+        }
+        boolean signature = placement.type() == PdfTemplateProperties.FieldType.SIGNATURE;
+        if (signature
+                && (placement.width() == null
+                        || placement.height() == null
+                        || placement.width() <= 0
+                        || placement.height() <= 0)) {
+            throw new IllegalStateException(
+                    "field '"
+                            + fieldName
+                            + "': signature fields require positive width and height");
+        }
+        if (!signature && (placement.width() != null || placement.height() != null)) {
+            throw new IllegalStateException(
+                    "field '"
+                            + fieldName
+                            + "': width/height are only valid for signature fields; did you mean"
+                            + " max-width?");
         }
         return placement;
     }
