@@ -3,7 +3,6 @@ package com.xuche.pdfboxservice.pdf;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -21,19 +20,29 @@ import org.springframework.stereotype.Service;
  * <ul>
  *   <li>{@link PdfTemplateProperties.FieldType#TEXT} — the value is drawn at {@code page/x/y},
  *       optionally shrunk to fit {@code maxWidth}
- *   <li>{@link PdfTemplateProperties.FieldType#CHECKBOX} — an X is drawn when the value is
- *       boolean-ish true
+ *   <li>{@link PdfTemplateProperties.FieldType#CHECKBOX} — an X is drawn when the value is {@code
+ *       true}
  * </ul>
  *
  * Requested field names are validated against the template's supported fields; unknown names are
- * rejected with {@link UnknownTemplateFieldException}. Checkbox values must be boolean-ish
- * (true/false, yes/no, on/off, 1/0); anything else is rejected with {@link
- * InvalidFieldValueException}.
+ * rejected with {@link UnknownTemplateFieldException}. Values are validated against the field type:
+ * text fields require a JSON string, checkbox fields a JSON boolean; anything else is rejected with
+ * {@link InvalidFieldValueException}.
  */
 @Service
 class PdfReportService {
 
+    /**
+     * Standard-14 Helvetica: needs no embedding, but is limited to WinAnsi (Latin) characters. For
+     * broader scripts, embed a TTF/OTF with {@code PDType0Font} instead.
+     */
+    private static final PDType1Font DEFAULT_FONT =
+            new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+
     private static final float DEFAULT_FONT_SIZE = 12f;
+
+    /** Rendered at checkbox placements when the value is {@code true}. */
+    private static final String CHECK_MARK = "X";
 
     private final TemplateRegistry templateRegistry;
 
@@ -41,7 +50,7 @@ class PdfReportService {
         this.templateRegistry = templateRegistry;
     }
 
-    byte[] fill(String templateName, Map<String, String> fields) {
+    byte[] fill(String templateName, Map<String, ?> fields) {
         ResolvedTemplate template = templateRegistry.get(templateName);
         if (template == null) {
             throw new TemplateNotFoundException(templateName);
@@ -69,50 +78,64 @@ class PdfReportService {
             String templateName,
             PDDocument document,
             ResolvedTemplate template,
-            Map<String, String> values)
+            Map<String, ?> values)
             throws IOException {
-        PDType1Font font = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-        for (Map.Entry<String, String> entry : values.entrySet()) {
+        for (Map.Entry<String, ?> entry : values.entrySet()) {
             PdfTemplateProperties.FieldPlacement placement =
                     template.placements().get(entry.getKey());
             switch (placement.type()) {
-                case TEXT -> drawValue(document, font, placement, entry.getValue());
+                case TEXT -> {
+                    if (!(entry.getValue() instanceof String text)) {
+                        throw new InvalidFieldValueException(
+                                templateName, entry.getKey(), "a JSON string", entry.getValue());
+                    }
+                    drawText(document, DEFAULT_FONT, placement, text);
+                }
                 case CHECKBOX -> {
-                    if (parseCheckboxValue(templateName, entry.getKey(), entry.getValue())) {
-                        drawText(document, font, placement, "X");
+                    if (!(entry.getValue() instanceof Boolean checked)) {
+                        throw new InvalidFieldValueException(
+                                templateName, entry.getKey(), "a JSON boolean", entry.getValue());
+                    }
+                    if (checked) {
+                        drawCheckMark(document, DEFAULT_FONT, placement);
                     }
                 }
             }
         }
     }
 
-    private void drawValue(
+    /**
+     * Draws a text field value, shrinking the configured font size proportionally to fit maxWidth.
+     */
+    private void drawText(
             PDDocument document,
             PDType1Font font,
             PdfTemplateProperties.FieldPlacement placement,
             String value)
             throws IOException {
-        float fontSize = placement.fontSize() != null ? placement.fontSize() : DEFAULT_FONT_SIZE;
+        float fontSize = configuredFontSize(placement);
         if (placement.maxWidth() != null && !value.isEmpty()) {
             float width = font.getStringWidth(value) / 1000f * fontSize;
             if (width > placement.maxWidth()) {
                 fontSize *= placement.maxWidth() / width;
             }
         }
-        drawText(document, font, placement, value, fontSize);
+        drawValue(document, font, placement, value, fontSize);
     }
 
-    private void drawText(
-            PDDocument document,
-            PDType1Font font,
-            PdfTemplateProperties.FieldPlacement placement,
-            String value)
+    /** Draws the check mark for a checked checkbox at the placement coordinates. */
+    private void drawCheckMark(
+            PDDocument document, PDType1Font font, PdfTemplateProperties.FieldPlacement placement)
             throws IOException {
-        float fontSize = placement.fontSize() != null ? placement.fontSize() : DEFAULT_FONT_SIZE;
-        drawText(document, font, placement, value, fontSize);
+        drawValue(document, font, placement, CHECK_MARK, configuredFontSize(placement));
     }
 
-    private void drawText(
+    private static float configuredFontSize(PdfTemplateProperties.FieldPlacement placement) {
+        return placement.fontSize() != null ? placement.fontSize() : DEFAULT_FONT_SIZE;
+    }
+
+    /** The drawing primitive: renders the value at the placement coordinates and font size. */
+    private void drawValue(
             PDDocument document,
             PDType1Font font,
             PdfTemplateProperties.FieldPlacement placement,
@@ -132,13 +155,5 @@ class PdfReportService {
             content.showText(value);
             content.endText();
         }
-    }
-
-    private static boolean parseCheckboxValue(String templateName, String fieldName, String value) {
-        return switch (value.toLowerCase(Locale.ROOT)) {
-            case "true", "yes", "on", "1" -> true;
-            case "false", "no", "off", "0" -> false;
-            default -> throw new InvalidFieldValueException(templateName, fieldName, value);
-        };
     }
 }

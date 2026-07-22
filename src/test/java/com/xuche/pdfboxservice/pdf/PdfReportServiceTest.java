@@ -86,7 +86,7 @@ class PdfReportServiceTest {
         byte[] pdf =
                 service.fill(
                         "report",
-                        Map.of("confidential", "true", "reviewed", "no", "approved", "1"));
+                        Map.of("confidential", true, "reviewed", false, "approved", true));
 
         try (PDDocument filled = Loader.loadPDF(pdf)) {
             // Two boxes checked -> two X marks in the page content.
@@ -96,11 +96,23 @@ class PdfReportServiceTest {
     }
 
     @Test
-    void rejectsInvalidCheckboxValues() {
-        assertThatThrownBy(() -> service.fill("report", Map.of("confidential", "maybe")))
+    void rejectsValuesOfTheWrongJsonType() {
+        // checkbox fields require a JSON boolean
+        assertThatThrownBy(() -> service.fill("report", Map.of("confidential", "yes")))
                 .isInstanceOf(InvalidFieldValueException.class)
                 .hasMessageContaining("confidential")
-                .hasMessageContaining("maybe");
+                .hasMessageContaining("expected a JSON boolean")
+                .hasMessageContaining("string \"yes\"");
+        assertThatThrownBy(() -> service.fill("report", Map.of("confidential", 1)))
+                .isInstanceOf(InvalidFieldValueException.class)
+                .hasMessageContaining("number 1");
+
+        // text fields require a JSON string
+        assertThatThrownBy(() -> service.fill("report", Map.of("title", true)))
+                .isInstanceOf(InvalidFieldValueException.class)
+                .hasMessageContaining("title")
+                .hasMessageContaining("expected a JSON string")
+                .hasMessageContaining("boolean true");
     }
 
     @Test
@@ -112,8 +124,8 @@ class PdfReportServiceTest {
                                 "recipient", "Jane Doe",
                                 "course", "Advanced Origami",
                                 "date", "2026-07-19",
-                                "module-basics", "true",
-                                "module-project", "yes",
+                                "module-basics", true,
+                                "module-project", true,
                                 "instructor-name", "Prof. Crane",
                                 "instructor-date", "2026-07-19"));
 

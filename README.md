@@ -24,15 +24,15 @@ Content-Type: application/json
 }
 ```
 
-- Text fields take any string; checkbox fields take boolean-ish values: `true`/`false`,
-  `yes`/`no`, `on`/`off`, `1`/`0` (case-insensitive).
+- Text fields take JSON strings; checkbox fields take JSON booleans (`true`/`false`).
+  Values of the wrong JSON type are rejected with a clear message.
 
 Responses:
 
 | Status | When |
 | ------ | ---- |
 | `200 application/pdf` | Filled PDF, `Content-Disposition: attachment; filename="<templateName>-filled.pdf"` |
-| `400` | Body missing `fields`, a field name the template doesn't support, or a non-boolean checkbox value (response `message` explains) |
+| `400` | Body missing `fields`, a field name the template doesn't support, or a value of the wrong JSON type for the field (response `message` explains) |
 | `404` | `{templateName}` is not in the supported template registry |
 
 ### Examples
@@ -43,13 +43,13 @@ Responses:
 # report template, 3 pages: text fields (p1), checkboxes (p2), notes (p3)
 curl -X POST http://localhost:8080/api/reports/report \
   -H 'Content-Type: application/json' \
-  -d '{"fields":{"title":"Q3 Sales Report","author":"Jane Doe","date":"2026-07-19","summary":"Sales are up 12%.","confidential":"true","reviewed":"yes","approved":"false","notes":"Follow up with the west region."}}' \
+  -d '{"fields":{"title":"Q3 Sales Report","author":"Jane Doe","date":"2026-07-19","summary":"Sales are up 12%.","confidential":true,"reviewed":true,"approved":false,"notes":"Follow up with the west region."}}' \
   -o report-filled.pdf
 
 # certificate template, 3 pages: certificate (p1), checklist checkboxes (p2), instructor sign-off (p3)
 curl -X POST http://localhost:8080/api/reports/certificate \
   -H 'Content-Type: application/json' \
-  -d '{"fields":{"recipient":"Jane Doe","course":"Advanced Origami","date":"2026-07-19","module-basics":"true","module-project":"yes","instructor-name":"Prof. Crane","instructor-date":"2026-07-19"}}' \
+  -d '{"fields":{"recipient":"Jane Doe","course":"Advanced Origami","date":"2026-07-19","module-basics":true,"module-project":true,"instructor-name":"Prof. Crane","instructor-date":"2026-07-19"}}' \
   -o certificate-filled.pdf
 ```
 
@@ -75,7 +75,7 @@ pdf:
           page: 2
           x: 73
           y: 679
-          type: checkbox                   # text (default) | checkbox: draws X when value is true-ish
+          type: checkbox                   # text (default) | checkbox: draws X when value is true
 ```
 
 At startup the `TemplateRegistry` inspects each PDF and **fails fast** (listing every problem)
@@ -94,7 +94,7 @@ is what request validation uses to reject unknown names with `400`.
 | Type | Rendering |
 | ---- | --------- |
 | text (default) | value drawn at `page/x/y`, optionally shrunk proportionally to fit `max-width` |
-| checkbox | `X` drawn at `page/x/y` when the value is true-ish; nothing otherwise |
+| checkbox | `X` drawn at `page/x/y` when the value is `true`; nothing when `false` |
 
 ### Adding a new template
 

@@ -66,7 +66,10 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
     public enum FieldType {
         /** Draw the value as text, shrunk to {@code maxWidth} when configured. */
         TEXT,
-        /** Draw an X at the coordinates when the value is boolean-ish true; nothing otherwise. */
+        /**
+         * Draw an X at the coordinates when the value is {@code "true"}; nothing when {@code
+         * "false"}.
+         */
         CHECKBOX
     }
 }
