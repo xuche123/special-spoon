@@ -7,15 +7,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.regex.Pattern;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
-import org.apache.pdfbox.pdmodel.interactive.form.PDCheckBox;
-import org.apache.pdfbox.pdmodel.interactive.form.PDField;
-import org.apache.pdfbox.pdmodel.interactive.form.PDSignatureField;
-import org.apache.pdfbox.pdmodel.interactive.form.PDTextField;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
@@ -28,9 +23,9 @@ import org.springframework.stereotype.Component;
  *
  * <ul>
  *   <li>the PDF file must exist and load
- *   <li>a PDF with an AcroForm is filled by field name; declaring coordinate fields is an error
- *   <li>a form-free PDF must declare coordinate placements, and every placement must be complete
- *       ({@code page}, {@code x}, {@code y}) and within the document's page count
+ *   <li>the PDF must be form-free (AcroForm templates are not supported)
+ *   <li>it must declare coordinate placements, and every placement must be complete ({@code page},
+ *       {@code x}, {@code y}) and within the document's page count
  * </ul>
  */
 @Component
@@ -86,60 +81,25 @@ class TemplateRegistry {
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             PDAcroForm form = document.getDocumentCatalog().getAcroForm();
             if (form != null && !form.getFields().isEmpty()) {
-                if (!template.fields().isEmpty()) {
-                    throw new IllegalStateException(
-                            "declares coordinate fields but the PDF has an AcroForm; remove the"
-                                    + " fields, AcroForm templates are filled by field name");
-                }
-                // Text fields and checkboxes are fillable via fields; signature fields accept a
-                // drawn e-signature image via signatures.
-                Set<String> knownFields = new TreeSet<>();
-                Set<String> signatureFields = new TreeSet<>();
-                for (PDField field : form.getFieldTree()) {
-                    if (field instanceof PDTextField || field instanceof PDCheckBox) {
-                        knownFields.add(field.getFullyQualifiedName());
-                    } else if (field instanceof PDSignatureField) {
-                        signatureFields.add(field.getFullyQualifiedName());
-                    }
-                }
-                return new ResolvedTemplate(
-                        name,
-                        ResolvedTemplate.Kind.ACROFORM,
-                        pdfBytes,
-                        knownFields,
-                        signatureFields,
-                        Map.of());
+                throw new IllegalStateException(
+                        "PDF has an AcroForm; only form-free (overlay) templates are supported");
             }
-
             if (template.fields().isEmpty()) {
                 throw new IllegalStateException(
-                        "PDF has no AcroForm; coordinate placements are required under"
-                                + " pdf.templates."
+                        "coordinate placements are required under pdf.templates."
                                 + name
                                 + ".fields");
             }
             Map<String, PdfTemplateProperties.FieldPlacement> placements = new LinkedHashMap<>();
-            Set<String> knownFields = new TreeSet<>();
-            Set<String> signatureFields = new TreeSet<>();
             for (Map.Entry<String, PdfTemplateProperties.FieldPlacement> field :
                     template.fields().entrySet()) {
-                PdfTemplateProperties.FieldPlacement placement =
+                placements.put(
+                        field.getKey(),
                         validatePlacement(
-                                field.getKey(), field.getValue(), document.getNumberOfPages());
-                placements.put(field.getKey(), placement);
-                if (placement.type() == PdfTemplateProperties.FieldType.SIGNATURE) {
-                    signatureFields.add(field.getKey());
-                } else {
-                    knownFields.add(field.getKey());
-                }
+                                field.getKey(), field.getValue(), document.getNumberOfPages()));
             }
             return new ResolvedTemplate(
-                    name,
-                    ResolvedTemplate.Kind.OVERLAY,
-                    pdfBytes,
-                    knownFields,
-                    signatureFields,
-                    Map.copyOf(placements));
+                    name, pdfBytes, Set.copyOf(placements.keySet()), Map.copyOf(placements));
         } catch (IOException e) {
             throw new UncheckedIOException("failed to parse " + template.file(), e);
         }
@@ -168,24 +128,6 @@ class TemplateRegistry {
         }
         if (placement.maxWidth() != null && placement.maxWidth() <= 0) {
             throw new IllegalStateException("field '" + fieldName + "': maxWidth must be positive");
-        }
-        boolean signature = placement.type() == PdfTemplateProperties.FieldType.SIGNATURE;
-        if (signature
-                && (placement.width() == null
-                        || placement.height() == null
-                        || placement.width() <= 0
-                        || placement.height() <= 0)) {
-            throw new IllegalStateException(
-                    "field '"
-                            + fieldName
-                            + "': signature fields require positive width and height");
-        }
-        if (!signature && (placement.width() != null || placement.height() != null)) {
-            throw new IllegalStateException(
-                    "field '"
-                            + fieldName
-                            + "': width/height are only valid for signature fields; did you mean"
-                            + " max-width?");
         }
         return placement;
     }

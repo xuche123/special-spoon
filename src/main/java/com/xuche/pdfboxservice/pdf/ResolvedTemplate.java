@@ -4,22 +4,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A template after startup validation: its fill strategy is decided and its supported field names
- * are known (from the AcroForm for {@link Kind#ACROFORM}, from the configured placements for {@link
- * Kind#OVERLAY}).
+ * A template after startup validation: the PDF is known to load, and the supported field names and
+ * their coordinate placements are known.
  */
 record ResolvedTemplate(
         String name,
-        Kind kind,
         byte[] pdfBytes,
         Set<String> knownFields,
-        Set<String> signatureFields,
-        Map<String, PdfTemplateProperties.FieldPlacement> placements) {
-
-    enum Kind {
-        /** Filled by AcroForm field name, then flattened. */
-        ACROFORM,
-        /** Filled by drawing values as page content at configured coordinates. */
-        OVERLAY
-    }
-}
+        Map<String, PdfTemplateProperties.FieldPlacement> placements) {}

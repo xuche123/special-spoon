@@ -26,8 +26,7 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
 
     /**
      * @param file location of the template PDF, e.g. {@code classpath:templates/report.pdf}
-     * @param fields coordinate placements; required for form-free PDFs, forbidden for AcroForm PDFs
-     *     (enforced by {@link TemplateRegistry})
+     * @param fields coordinate placements for the template's fields
      */
     public record Template(@NotBlank String file, @Valid Map<String, FieldPlacement> fields) {
 
@@ -47,9 +46,6 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
      * @param fontSize default 12; shrunk proportionally if {@code maxWidth} is exceeded
      * @param maxWidth optional maximum rendered width in points
      * @param type how to render the value; default {@link FieldType#TEXT}
-     * @param width signature box width in points; required for {@link FieldType#SIGNATURE},
-     *     forbidden otherwise
-     * @param height signature box height in points; same rule as {@code width}
      */
     public record FieldPlacement(
             @NotNull @Positive Integer page,
@@ -57,9 +53,7 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
             @NotNull Float y,
             @Positive Float fontSize,
             @Positive Float maxWidth,
-            FieldType type,
-            @Positive Float width,
-            @Positive Float height) {
+            FieldType type) {
 
         public FieldPlacement {
             if (type == null) {
@@ -73,10 +67,6 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
         /** Draw the value as text, shrunk to {@code maxWidth} when configured. */
         TEXT,
         /** Draw an X at the coordinates when the value is boolean-ish true; nothing otherwise. */
-        CHECKBOX,
-        /**
-         * Stamp a drawn e-signature image, fitted inside the {@code width} x {@code height} box.
-         */
-        SIGNATURE
+        CHECKBOX
     }
 }

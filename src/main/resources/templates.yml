@@ -1,12 +1,61 @@
-# Registry of supported report templates. Adding a template means adding an entry here plus the
-# PDF under src/main/resources/templates/. The TemplateRegistry validates every entry at startup:
-#   - the PDF file must exist and load
-#   - PDFs with an AcroForm are filled by field name; declaring coordinate fields is an error
-#   - form-free PDFs must declare complete, in-bounds coordinate placements for every field
+# Registry of supported report templates. Adding a template means adding an entry here plus a
+# form-free PDF under src/main/resources/templates/. The TemplateRegistry validates every entry
+# at startup:
+#   - the PDF file must exist and load, and must not contain an AcroForm
+#   - every field must declare complete, in-bounds coordinate placements
 pdf:
   templates:
     report:
       file: classpath:templates/report.pdf
+      fields:
+        title:
+          page: 1
+          x: 150
+          y: 665
+          font-size: 14
+          max-width: 400
+        author:
+          page: 1
+          x: 150
+          y: 615
+          font-size: 14
+          max-width: 400
+        date:
+          page: 1
+          x: 150
+          y: 565
+          font-size: 14
+          max-width: 400
+        summary:
+          page: 1
+          x: 150
+          y: 525
+          font-size: 12
+          max-width: 400
+        confidential:
+          page: 2
+          x: 73
+          y: 679
+          font-size: 12
+          type: checkbox
+        reviewed:
+          page: 2
+          x: 73
+          y: 639
+          font-size: 12
+          type: checkbox
+        approved:
+          page: 2
+          x: 73
+          y: 599
+          font-size: 12
+          type: checkbox
+        notes:
+          page: 3
+          x: 150
+          y: 665
+          font-size: 12
+          max-width: 400
     certificate:
       file: classpath:templates/certificate.pdf
       fields:
@@ -58,10 +107,3 @@ pdf:
           y: 390
           font-size: 12
           max-width: 170
-        instructor-signature:
-          page: 3
-          x: 500
-          y: 340
-          width: 180
-          height: 60
-          type: signature

@@ -3,39 +3,29 @@ package com.xuche.pdfboxservice.pdf;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
-import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
-import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceRGB;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationWidget;
-import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceCharacteristicsDictionary;
-import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary;
-import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceEntry;
-import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
-import org.apache.pdfbox.pdmodel.interactive.form.PDCheckBox;
-import org.apache.pdfbox.pdmodel.interactive.form.PDSignatureField;
 import org.apache.pdfbox.pdmodel.interactive.form.PDTextField;
-import org.apache.pdfbox.pdmodel.interactive.form.PDVariableText;
 
 /**
- * Regenerates the sample templates:
+ * Regenerates the sample templates (all form-free; values are overlaid at the coordinates declared
+ * in {@code templates.yml}):
  *
  * <ul>
- *   <li>{@code src/main/resources/templates/report.pdf} — 3-page AcroForm template: text fields
- *       (p1), checkboxes (p2), sign-off text fields and a digital signature field (p3)
- *   <li>{@code src/main/resources/templates/certificate.pdf} — 3-page form-free template filled via
- *       the coordinate overlay (placements live in {@code templates.yml}): certificate (p1),
- *       checklist with checkbox squares (p2), instructor sign-off (p3)
- *   <li>{@code src/test/resources/templates/bare.pdf} — form-free template with no overlay config,
- *       used to test the registry validation
+ *   <li>{@code src/main/resources/templates/report.pdf} — 3 pages: text lines (p1), checkbox
+ *       squares (p2), notes (p3)
+ *   <li>{@code src/main/resources/templates/certificate.pdf} — 3 pages: certificate (p1), checklist
+ *       with checkbox squares (p2), instructor sign-off (p3)
+ *   <li>{@code src/test/resources/templates/bare.pdf} — form-free fixture for the "placements
+ *       required" registry validation
+ *   <li>{@code src/test/resources/templates/acroform.pdf} — AcroForm fixture for the "AcroForm not
+ *       supported" registry validation
  * </ul>
  *
  * <p>Run with:
@@ -52,64 +42,43 @@ public final class ReportTemplateGenerator {
             new PDType1Font(Standard14Fonts.FontName.HELVETICA);
     private static final PDType1Font HELVETICA_BOLD =
             new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
-    private static final float CHECKBOX_SIZE = 14f;
 
     private ReportTemplateGenerator() {}
 
     public static void main(String[] args) throws IOException {
-        writeAcroFormReportTemplate(Path.of("src/main/resources/templates/report.pdf"));
+        writeReportTemplate(Path.of("src/main/resources/templates/report.pdf"));
         writeCertificateTemplate(Path.of("src/main/resources/templates/certificate.pdf"));
         writeBareTemplate(Path.of("src/test/resources/templates/bare.pdf"));
+        writeAcroFormFixture(Path.of("src/test/resources/templates/acroform.pdf"));
     }
 
-    private static void writeAcroFormReportTemplate(Path output) throws IOException {
+    private static void writeReportTemplate(Path output) throws IOException {
         try (PDDocument document = new PDDocument()) {
-            PDAcroForm acroForm = new PDAcroForm(document);
-            document.getDocumentCatalog().setAcroForm(acroForm);
-
-            // Text fields inherit this appearance; without it filled values render blank.
-            PDResources resources = new PDResources();
-            resources.put(COSName.getPDFName("Helv"), HELVETICA);
-            acroForm.setDefaultResources(resources);
-            acroForm.setDefaultAppearance("/Helv 12 Tf 0 g");
-            acroForm.setNeedAppearances(true);
-
-            // Page 1: report text fields
+            // Page 1: report fields
             PDPage page1 = addPage(document, PDRectangle.LETTER);
             try (PDPageContentStream content = new PDPageContentStream(document, page1)) {
                 text(content, HELVETICA_BOLD, 20, 50, 730, "Sample Report");
-                text(content, HELVETICA, 12, 50, 665, "Title:");
-                text(content, HELVETICA, 12, 50, 615, "Author:");
-                text(content, HELVETICA, 12, 50, 565, "Date:");
-                text(content, HELVETICA, 12, 50, 525, "Summary:");
+                labeledLine(content, "Title:", 665);
+                labeledLine(content, "Author:", 615);
+                labeledLine(content, "Date:", 565);
+                labeledLine(content, "Summary:", 525);
             }
-            addTextField(acroForm, page1, "title", 150, 660, 400, 24, false);
-            addTextField(acroForm, page1, "author", 150, 610, 400, 24, false);
-            addTextField(acroForm, page1, "date", 150, 560, 400, 24, false);
-            addTextField(acroForm, page1, "summary", 150, 380, 400, 150, true);
 
             // Page 2: review checkboxes
             PDPage page2 = addPage(document, PDRectangle.LETTER);
             try (PDPageContentStream content = new PDPageContentStream(document, page2)) {
                 text(content, HELVETICA_BOLD, 20, 50, 730, "Review");
+                checkboxItem(content, 680, "Mark as confidential");
+                checkboxItem(content, 640, "Reviewed by team lead");
+                checkboxItem(content, 600, "Approved for release");
             }
-            addCheckBox(document, acroForm, page2, "confidential", 70, 680, "Mark as confidential");
-            addCheckBox(document, acroForm, page2, "reviewed", 70, 640, "Reviewed by team lead");
-            addCheckBox(document, acroForm, page2, "approved", 70, 600, "Approved for release");
 
-            // Page 3: sign-off with a digital signature field
+            // Page 3: notes
             PDPage page3 = addPage(document, PDRectangle.LETTER);
             try (PDPageContentStream content = new PDPageContentStream(document, page3)) {
-                text(content, HELVETICA_BOLD, 20, 50, 730, "Sign-off");
-                text(content, HELVETICA, 12, 50, 665, "Signed by:");
-                text(content, HELVETICA, 12, 50, 615, "Date:");
-                text(content, HELVETICA, 12, 50, 555, "Digital signature:");
-                content.addRect(150, 500, 300, 50);
-                content.stroke();
+                text(content, HELVETICA_BOLD, 20, 50, 730, "Notes");
+                labeledLine(content, "Notes:", 665);
             }
-            addTextField(acroForm, page3, "signed-by", 150, 660, 400, 24, false);
-            addTextField(acroForm, page3, "signature-date", 150, 610, 400, 24, false);
-            addSignatureField(acroForm, page3, "signature", 150, 500, 300, 50);
 
             save(document, output);
         }
@@ -145,9 +114,9 @@ public final class ReportTemplateGenerator {
             try (PDPageContentStream content = new PDPageContentStream(document, page2)) {
                 centeredText(
                         content, HELVETICA_BOLD, 24, "COURSE CHECKLIST", landscape.getWidth(), 540);
-                checklistItem(content, 480, "Module 1: Folding Fundamentals");
-                checklistItem(content, 440, "Module 2: Advanced Crease Patterns");
-                checklistItem(content, 400, "Module 3: Capstone Project");
+                checkboxItem(content, 480, "Module 1: Folding Fundamentals", 186, 210);
+                checkboxItem(content, 440, "Module 2: Advanced Crease Patterns", 186, 210);
+                checkboxItem(content, 400, "Module 3: Capstone Project", 186, 210);
             }
 
             // Page 3: instructor sign-off
@@ -158,9 +127,6 @@ public final class ReportTemplateGenerator {
                 line(content, 180, 445, 480, 445);
                 text(content, HELVETICA, 14, 180, 395, "Date:");
                 line(content, 235, 385, 415, 385);
-                text(content, HELVETICA, 14, 500, 412, "Signature:");
-                content.addRect(500, 340, 180, 60);
-                content.stroke();
             }
 
             save(document, output);
@@ -171,14 +137,25 @@ public final class ReportTemplateGenerator {
         try (PDDocument document = new PDDocument()) {
             PDPage page = addPage(document, PDRectangle.LETTER);
             try (PDPageContentStream content = new PDPageContentStream(document, page)) {
-                text(
-                        content,
-                        HELVETICA,
-                        12,
-                        50,
-                        750,
-                        "Bare template: no AcroForm, no overlay config.");
+                text(content, HELVETICA, 12, 50, 750, "Bare template: no overlay config.");
             }
+            save(document, output);
+        }
+    }
+
+    /** Minimal AcroForm PDF used to verify the registry rejects form-based templates. */
+    private static void writeAcroFormFixture(Path output) throws IOException {
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = addPage(document, PDRectangle.LETTER);
+            PDAcroForm acroForm = new PDAcroForm(document);
+            document.getDocumentCatalog().setAcroForm(acroForm);
+            PDTextField field = new PDTextField(acroForm);
+            field.setPartialName("field1");
+            acroForm.getFields().add(field);
+            PDAnnotationWidget widget = field.getWidgets().get(0);
+            widget.setRectangle(new PDRectangle(150, 700, 200, 20));
+            widget.setPage(page);
+            page.getAnnotations().add(widget);
             save(document, output);
         }
     }
@@ -189,119 +166,24 @@ public final class ReportTemplateGenerator {
         return page;
     }
 
-    private static void addTextField(
-            PDAcroForm acroForm,
-            PDPage page,
-            String name,
-            float x,
-            float y,
-            float width,
-            float height,
-            boolean multiline)
+    /** A label at x=50 and a fill-in line from x=150 to x=550, both at height {@code y}. */
+    private static void labeledLine(PDPageContentStream content, String label, float y)
             throws IOException {
-        PDTextField field = new PDTextField(acroForm);
-        field.setPartialName(name);
-        field.setQ(PDVariableText.QUADDING_LEFT);
-        if (multiline) {
-            field.setMultiline(true);
-        }
-        acroForm.getFields().add(field);
-        addWidget(page, field.getWidgets().get(0), x, y, width, height);
+        text(content, HELVETICA, 12, 50, y, label);
+        line(content, 150, y - 5, 550, y - 5);
     }
 
-    private static void addCheckBox(
-            PDDocument document,
-            PDAcroForm acroForm,
-            PDPage page,
-            String name,
-            float x,
-            float y,
-            String label)
+    private static void checkboxItem(PDPageContentStream content, float y, String label)
             throws IOException {
-        try (PDPageContentStream content =
-                new PDPageContentStream(
-                        document, page, PDPageContentStream.AppendMode.APPEND, true, true)) {
-            text(content, HELVETICA, 12, x + 25, y + 4, label);
-        }
-        PDCheckBox checkBox = new PDCheckBox(acroForm);
-        checkBox.setPartialName(name);
-        acroForm.getFields().add(checkBox);
-
-        PDAnnotationWidget widget = checkBox.getWidgets().get(0);
-        addWidget(page, widget, x, y, CHECKBOX_SIZE, CHECKBOX_SIZE);
-
-        // PDFBox does not generate checkbox appearances; without explicit on/off appearance
-        // streams the checked state renders nothing (and the on value is undefined).
-        COSDictionary states = new COSDictionary();
-        states.setItem(COSName.getPDFName("Yes"), checkboxAppearance(document, true));
-        states.setItem(COSName.OFF, checkboxAppearance(document, false));
-        PDAppearanceDictionary appearance = new PDAppearanceDictionary();
-        appearance.setNormalAppearance(new PDAppearanceEntry(states));
-        widget.setAppearance(appearance);
+        checkboxItem(content, y, label, 70, 95);
     }
 
-    private static PDAppearanceStream checkboxAppearance(PDDocument document, boolean checked)
+    private static void checkboxItem(
+            PDPageContentStream content, float y, String label, float boxX, float labelX)
             throws IOException {
-        PDType1Font zapfDingbats = new PDType1Font(Standard14Fonts.FontName.ZAPF_DINGBATS);
-        PDAppearanceStream stream = new PDAppearanceStream(document);
-        stream.setBBox(new PDRectangle(CHECKBOX_SIZE, CHECKBOX_SIZE));
-        PDResources resources = new PDResources();
-        resources.put(COSName.getPDFName("ZaDb"), zapfDingbats);
-        stream.setResources(resources);
-        try (PDPageContentStream content = new PDPageContentStream(document, stream)) {
-            content.setLineWidth(1);
-            content.addRect(1, 1, CHECKBOX_SIZE - 2, CHECKBOX_SIZE - 2);
-            content.stroke();
-            if (checked) {
-                content.beginText();
-                content.setFont(zapfDingbats, CHECKBOX_SIZE - 4);
-                content.newLineAtOffset(3, 3);
-                content.showText("\u2714"); // check mark; encoded as glyph 0x34 in ZapfDingbats
-                content.endText();
-            }
-        }
-        return stream;
-    }
-
-    private static void addSignatureField(
-            PDAcroForm acroForm,
-            PDPage page,
-            String name,
-            float x,
-            float y,
-            float width,
-            float height)
-            throws IOException {
-        PDSignatureField signatureField = new PDSignatureField(acroForm);
-        signatureField.setPartialName(name);
-        acroForm.getFields().add(signatureField);
-        addWidget(page, signatureField.getWidgets().get(0), x, y, width, height);
-    }
-
-    private static void addWidget(
-            PDPage page, PDAnnotationWidget widget, float x, float y, float width, float height)
-            throws IOException {
-        widget.setRectangle(new PDRectangle(x, y, width, height));
-        widget.setPage(page);
-        widget.setPrinted(true);
-        widget.setAppearanceCharacteristics(borderCharacteristics());
-        page.getAnnotations().add(widget);
-    }
-
-    private static PDAppearanceCharacteristicsDictionary borderCharacteristics() {
-        PDAppearanceCharacteristicsDictionary characteristics =
-                new PDAppearanceCharacteristicsDictionary(new COSDictionary());
-        characteristics.setBorderColour(
-                new PDColor(new float[] {0f, 0f, 0f}, PDDeviceRGB.INSTANCE));
-        characteristics.setBackground(new PDColor(new float[] {1f, 1f, 1f}, PDDeviceRGB.INSTANCE));
-        return characteristics;
-    }
-
-    private static void checklistItem(PDPageContentStream content, float y, String label)
-            throws IOException {
-        content.addRect(186, y - 4, 14, 14);
+        content.addRect(boxX, y - 4, 14, 14);
         content.stroke();
-        text(content, HELVETICA, 14, 210, y, label);
+        text(content, HELVETICA, 12, labelX, y, label);
     }
 
     private static void text(

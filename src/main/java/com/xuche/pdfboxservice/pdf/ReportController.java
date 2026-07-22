@@ -21,7 +21,7 @@ class ReportController {
     @PostMapping("/api/reports/{templateName}")
     ResponseEntity<byte[]> fillReport(
             @PathVariable String templateName, @Valid @RequestBody FillReportRequest request) {
-        byte[] pdf = pdfReportService.fill(templateName, request.fields(), request.signatures());
+        byte[] pdf = pdfReportService.fill(templateName, request.fields());
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(
