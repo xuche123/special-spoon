@@ -6,7 +6,8 @@ public abstract class ReportException extends RuntimeException {
     private final String version;
     private final String fieldName;
 
-    ReportException(String message, String templateName, String version, String fieldName) {
+    protected ReportException(
+            String message, String templateName, String version, String fieldName) {
         super(message);
         this.templateName = templateName;
         this.version = version;

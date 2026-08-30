@@ -1,4 +1,4 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.template;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 
 /** Startup-resolved registry of immutable template versions. */
 @Component
-class TemplateRegistry {
+public class TemplateRegistry {
     private static final Pattern TEMPLATE_NAME = Pattern.compile("[a-z0-9][a-z0-9-]*");
 
     private final Map<String, Map<String, ResolvedTemplate>> templates;
@@ -32,11 +32,11 @@ class TemplateRegistry {
         currentVersions = resolved.currentVersions();
     }
 
-    TemplateRegistry(PdfTemplateProperties properties, ResourceLoader resourceLoader) {
+    public TemplateRegistry(PdfTemplateProperties properties, ResourceLoader resourceLoader) {
         this(properties, new ClasspathTemplateStorage(resourceLoader));
     }
 
-    ResolvedTemplate get(String name, String requestedVersion) {
+    public ResolvedTemplate get(String name, String requestedVersion) {
         Map<String, ResolvedTemplate> versions = templates.get(name);
         if (versions == null) {
             return null;
@@ -45,7 +45,7 @@ class TemplateRegistry {
         return versions.get(version);
     }
 
-    ResolvedTemplate get(String name) {
+    public ResolvedTemplate get(String name) {
         return get(name, null);
     }
 

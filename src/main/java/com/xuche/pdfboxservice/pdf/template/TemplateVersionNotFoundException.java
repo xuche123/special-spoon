@@ -1,4 +1,6 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.template;
+
+import com.xuche.pdfboxservice.pdf.ReportException;
 
 /** Thrown when a requested template version is not configured. */
 public class TemplateVersionNotFoundException extends ReportException {

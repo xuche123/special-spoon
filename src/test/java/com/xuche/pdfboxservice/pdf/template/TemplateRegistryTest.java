@@ -1,12 +1,12 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.template;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.FieldPlacement;
-import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.Template;
-import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.TextAlignment;
-import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.TextOverflow;
+import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties.FieldPlacement;
+import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties.Template;
+import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties.TextAlignment;
+import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties.TextOverflow;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.DefaultResourceLoader;

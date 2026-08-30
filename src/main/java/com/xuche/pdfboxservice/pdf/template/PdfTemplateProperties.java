@@ -1,4 +1,4 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.template;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

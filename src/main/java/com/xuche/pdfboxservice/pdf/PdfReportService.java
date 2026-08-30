@@ -1,5 +1,10 @@
 package com.xuche.pdfboxservice.pdf;
 
+import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties;
+import com.xuche.pdfboxservice.pdf.template.ResolvedTemplate;
+import com.xuche.pdfboxservice.pdf.template.TemplateNotFoundException;
+import com.xuche.pdfboxservice.pdf.template.TemplateRegistry;
+import com.xuche.pdfboxservice.pdf.template.TemplateVersionNotFoundException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
