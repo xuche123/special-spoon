@@ -1,7 +1,7 @@
 package com.xuche.pdfboxservice.pdf;
 
 /** Internal exception carrying only safe, client-relevant report context. */
-abstract class ReportException extends RuntimeException {
+public abstract class ReportException extends RuntimeException {
     private final String templateName;
     private final String version;
     private final String fieldName;
@@ -13,15 +13,15 @@ abstract class ReportException extends RuntimeException {
         this.fieldName = fieldName;
     }
 
-    String templateName() {
+    public String templateName() {
         return templateName;
     }
 
-    String version() {
+    public String version() {
         return version;
     }
 
-    String fieldName() {
+    public String fieldName() {
         return fieldName;
     }
 }

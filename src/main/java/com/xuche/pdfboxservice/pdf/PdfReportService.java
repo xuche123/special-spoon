@@ -37,7 +37,7 @@ import org.springframework.stereotype.Service;
  * {@link InvalidFieldValueException}.
  */
 @Service
-class PdfReportService {
+public class PdfReportService {
 
     /**
      * Standard-14 Helvetica: needs no embedding, but is limited to WinAnsi (Latin) characters. For
@@ -54,12 +54,12 @@ class PdfReportService {
     private final TemplateRegistry templateRegistry;
     private final PdfRequestLimits limits;
 
-    PdfReportService(TemplateRegistry templateRegistry) {
+    public PdfReportService(TemplateRegistry templateRegistry) {
         this(templateRegistry, new PdfRequestLimits());
     }
 
     @Autowired
-    PdfReportService(TemplateRegistry templateRegistry, PdfRequestLimits limits) {
+    public PdfReportService(TemplateRegistry templateRegistry, PdfRequestLimits limits) {
         this.templateRegistry = templateRegistry;
         this.limits = limits;
     }
@@ -68,7 +68,7 @@ class PdfReportService {
         return generate(templateName, null, fields).pdfBytes();
     }
 
-    GeneratedReport generate(String templateName, String version, Map<String, ?> fields) {
+    public GeneratedReport generate(String templateName, String version, Map<String, ?> fields) {
         return render(templateName, version, fields).report();
     }
 
@@ -173,7 +173,8 @@ class PdfReportService {
         return width > placement.maxWidth() ? fontSize * placement.maxWidth() / width : fontSize;
     }
 
-    TemplatePreview preview(String templateName, String version, Map<String, ?> suppliedFields) {
+    public TemplatePreview preview(
+            String templateName, String version, Map<String, ?> suppliedFields) {
         ResolvedTemplate template = resolveTemplate(templateName, version);
         Map<String, Object> values = resolvedValues(template, suppliedFields);
         RenderedReport rendered = render(templateName, version, values);
@@ -195,13 +196,13 @@ class PdfReportService {
         return values;
     }
 
-    record GeneratedReport(byte[] pdfBytes, String templateVersion) {}
+    public record GeneratedReport(byte[] pdfBytes, String templateVersion) {}
 
     private record RenderedReport(GeneratedReport report, List<FieldPreview> fields) {}
 
-    record TemplatePreview(GeneratedReport report, List<FieldPreview> fields) {}
+    public record TemplatePreview(GeneratedReport report, List<FieldPreview> fields) {}
 
-    record FieldPreview(
+    public record FieldPreview(
             String name,
             Integer page,
             Float x,

@@ -1,5 +1,6 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.web;
 
+import com.xuche.pdfboxservice.pdf.ReportException;
 import java.util.UUID;
 
 /** Stable, safe error payload returned by report endpoints. */

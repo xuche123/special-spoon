@@ -1,4 +1,4 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.web;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -10,6 +10,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.xuche.pdfboxservice.pdf.InvalidFieldValueException;
+import com.xuche.pdfboxservice.pdf.PdfRenderingFailedException;
+import com.xuche.pdfboxservice.pdf.PdfReportService;
+import com.xuche.pdfboxservice.pdf.PdfTemplateProperties;
+import com.xuche.pdfboxservice.pdf.TemplateNotFoundException;
+import com.xuche.pdfboxservice.pdf.TemplateVersionNotFoundException;
+import com.xuche.pdfboxservice.pdf.TextOverflowException;
+import com.xuche.pdfboxservice.pdf.UnknownTemplateFieldException;
+import com.xuche.pdfboxservice.pdf.UnsupportedGlyphException;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import org.junit.jupiter.api.Test;

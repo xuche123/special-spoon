@@ -1,5 +1,6 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.web;
 
+import com.xuche.pdfboxservice.pdf.RequestLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,10 +9,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 /** Rejects oversized report bodies before JSON deserialization allocates the request. */
 @Component
-final class ReportRequestLimitInterceptor implements HandlerInterceptor {
+final class ReportRequestAdmissionInterceptor implements HandlerInterceptor {
     private final long maxRequestBodyBytes;
 
-    ReportRequestLimitInterceptor(
+    ReportRequestAdmissionInterceptor(
             @Value("${pdf.limits.max-request-body-bytes:1048576}") long maxRequestBodyBytes) {
         this.maxRequestBodyBytes = maxRequestBodyBytes;
     }
