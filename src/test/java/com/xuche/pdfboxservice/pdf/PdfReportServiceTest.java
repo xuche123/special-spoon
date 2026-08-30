@@ -176,6 +176,20 @@ class PdfReportServiceTest {
     }
 
     @Test
+    void previewMetadataUsesTheEffectiveFontSizeRenderedToFit() {
+        String longName = "Emmanuella Maximiliana Wilhelmina Charlotte von Hessen-Kassel";
+
+        PdfReportService.TemplatePreview preview =
+                service.preview("certificate", "v1", Map.of("recipient", longName));
+
+        assertThat(preview.fields())
+                .filteredOn(field -> field.name().equals("recipient"))
+                .singleElement()
+                .extracting(PdfReportService.FieldPreview::fontSize)
+                .matches(fontSize -> fontSize < 28f);
+    }
+
+    @Test
     void overlaysCertificateFieldsAcrossPages() throws Exception {
         byte[] pdf =
                 service.fill(

@@ -69,6 +69,36 @@ class PdfReportService {
     }
 
     GeneratedReport generate(String templateName, String version, Map<String, ?> fields) {
+        return render(templateName, version, fields).report();
+    }
+
+    private RenderedReport render(String templateName, String version, Map<String, ?> fields) {
+        ResolvedTemplate template = resolveTemplate(templateName, version);
+        validateFields(templateName, template, fields);
+
+        try (PDDocument document = Loader.loadPDF(template.pdfBytes())) {
+            PDFont font =
+                    template.fontBytes() == null
+                            ? DEFAULT_FONT
+                            : PDType0Font.load(
+                                    document, new ByteArrayInputStream(template.fontBytes()));
+            overlayFields(templateName, document, template, fields, font);
+
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            document.save(output);
+            if (output.size() > limits.maxGeneratedPdfBytes()) {
+                throw new RequestLimitExceededException(
+                        "The generated PDF exceeds the configured size limit.", templateName, null);
+            }
+            return new RenderedReport(
+                    new GeneratedReport(output.toByteArray(), template.version()),
+                    previewFields(template, fields, font));
+        } catch (IOException e) {
+            throw new PdfRenderingFailedException(templateName, template.version(), e);
+        }
+    }
+
+    private ResolvedTemplate resolveTemplate(String templateName, String version) {
         ResolvedTemplate template = templateRegistry.get(templateName, version);
         if (template == null) {
             if (version == null) {
@@ -76,7 +106,11 @@ class PdfReportService {
             }
             throw new TemplateVersionNotFoundException(templateName, version);
         }
+        return template;
+    }
 
+    private void validateFields(
+            String templateName, ResolvedTemplate template, Map<String, ?> fields) {
         if (fields.size() > limits.maxFields()) {
             throw new RequestLimitExceededException(
                     "The report contains too many fields.", templateName, null);
@@ -97,48 +131,10 @@ class PdfReportService {
             throw new UnknownTemplateFieldException(
                     templateName, template.version(), unknownFields, template.knownFields());
         }
-
-        try (PDDocument document = Loader.loadPDF(template.pdfBytes())) {
-            PDFont font =
-                    template.fontBytes() == null
-                            ? DEFAULT_FONT
-                            : PDType0Font.load(
-                                    document, new ByteArrayInputStream(template.fontBytes()));
-            overlayFields(templateName, document, template, fields, font);
-
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            document.save(output);
-            if (output.size() > limits.maxGeneratedPdfBytes()) {
-                throw new RequestLimitExceededException(
-                        "The generated PDF exceeds the configured size limit.", templateName, null);
-            }
-            return new GeneratedReport(output.toByteArray(), template.version());
-        } catch (IOException e) {
-            throw new PdfRenderingFailedException(templateName, template.version(), e);
-        }
     }
 
-    TemplatePreview preview(String templateName, String version, Map<String, ?> suppliedFields) {
-        ResolvedTemplate template = templateRegistry.get(templateName, version);
-        if (template == null) {
-            if (version == null) {
-                throw new TemplateNotFoundException(templateName);
-            }
-            throw new TemplateVersionNotFoundException(templateName, version);
-        }
-
-        Map<String, Object> values = new LinkedHashMap<>();
-        values.putAll(suppliedFields);
-        for (Map.Entry<String, PdfTemplateProperties.FieldPlacement> entry :
-                template.placements().entrySet()) {
-            Object defaultValue =
-                    entry.getValue().type() == PdfTemplateProperties.FieldType.CHECKBOX
-                            ? false
-                            : "";
-            values.putIfAbsent(entry.getKey(), defaultValue);
-        }
-
-        GeneratedReport report = generate(templateName, version, values);
+    private List<FieldPreview> previewFields(
+            ResolvedTemplate template, Map<String, ?> values, PDFont font) throws IOException {
         List<FieldPreview> fields = new ArrayList<>();
         for (Map.Entry<String, PdfTemplateProperties.FieldPlacement> entry :
                 template.placements().entrySet()) {
@@ -149,7 +145,7 @@ class PdfReportService {
                             placement.page(),
                             placement.x(),
                             placement.y(),
-                            configuredFontSize(placement),
+                            effectiveFontSize(font, placement, values.get(entry.getKey())),
                             placement.maxWidth(),
                             placement.maxHeight(),
                             placement.lineHeight(),
@@ -159,10 +155,49 @@ class PdfReportService {
                             template.font(),
                             values.get(entry.getKey())));
         }
-        return new TemplatePreview(report, fields);
+        return fields;
+    }
+
+    private float effectiveFontSize(
+            PDFont font, PdfTemplateProperties.FieldPlacement placement, Object value)
+            throws IOException {
+        float fontSize = configuredFontSize(placement);
+        if (placement.type() != PdfTemplateProperties.FieldType.TEXT
+                || placement.maxHeight() != null
+                || !(value instanceof String text)
+                || text.isEmpty()
+                || placement.maxWidth() == null) {
+            return fontSize;
+        }
+        float width = textWidth(font, text, fontSize);
+        return width > placement.maxWidth() ? fontSize * placement.maxWidth() / width : fontSize;
+    }
+
+    TemplatePreview preview(String templateName, String version, Map<String, ?> suppliedFields) {
+        ResolvedTemplate template = resolveTemplate(templateName, version);
+        Map<String, Object> values = resolvedValues(template, suppliedFields);
+        RenderedReport rendered = render(templateName, version, values);
+        return new TemplatePreview(rendered.report(), rendered.fields());
+    }
+
+    private Map<String, Object> resolvedValues(
+            ResolvedTemplate template, Map<String, ?> suppliedFields) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.putAll(suppliedFields);
+        for (Map.Entry<String, PdfTemplateProperties.FieldPlacement> entry :
+                template.placements().entrySet()) {
+            Object defaultValue =
+                    entry.getValue().type() == PdfTemplateProperties.FieldType.CHECKBOX
+                            ? false
+                            : "";
+            values.putIfAbsent(entry.getKey(), defaultValue);
+        }
+        return values;
     }
 
     record GeneratedReport(byte[] pdfBytes, String templateVersion) {}
+
+    private record RenderedReport(GeneratedReport report, List<FieldPreview> fields) {}
 
     record TemplatePreview(GeneratedReport report, List<FieldPreview> fields) {}
 
