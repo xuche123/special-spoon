@@ -17,6 +17,7 @@ class TemplateRegistryTest {
     private static final String CERTIFICATE = "classpath:templates/certificate.pdf";
     private static final String BARE = "classpath:templates/bare.pdf";
     private static final String ACROFORM = "classpath:templates/acroform.pdf";
+    private static final String FONT = "classpath:templates/test-font.ttf";
 
     private static Template template(String file, Map<String, FieldPlacement> fields) {
         return new Template(file, fields);
@@ -42,6 +43,48 @@ class TemplateRegistryTest {
         ResolvedTemplate report = registry.get("report");
         assertThat(report.knownFields()).containsExactly("title");
         assertThat(report.placements()).containsOnlyKeys("title");
+    }
+
+    @Test
+    void resolvesAndEmbedsConfiguredTtf() {
+        TemplateRegistry registry =
+                registryOf(
+                        Map.of(
+                                "report",
+                                new Template(
+                                        REPORT, FONT, Map.of("title", placement(1, 150f, 665f)))));
+        assertThat(registry.get("report").fontBytes()).isNotEmpty();
+    }
+
+    @Test
+    void rejectsMissingConfiguredFont() {
+        assertThatThrownBy(
+                        () ->
+                                registryOf(
+                                        Map.of(
+                                                "report",
+                                                new Template(
+                                                        REPORT,
+                                                        "classpath:templates/nope.ttf",
+                                                        Map.of("title", placement(1, 1f, 1f))))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("pdf.templates.report")
+                .hasMessageContaining("not found");
+    }
+
+    @Test
+    void rejectsNonTtfConfiguredFont() {
+        assertThatThrownBy(
+                        () ->
+                                registryOf(
+                                        Map.of(
+                                                "report",
+                                                new Template(
+                                                        REPORT,
+                                                        "classpath:templates/report.otf",
+                                                        Map.of("title", placement(1, 1f, 1f))))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("classpath TTF");
     }
 
     @Test

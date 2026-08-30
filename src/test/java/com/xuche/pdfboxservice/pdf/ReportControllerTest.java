@@ -78,6 +78,22 @@ class ReportControllerTest {
     }
 
     @Test
+    void unsupportedGlyphReturnsStructured400() throws Exception {
+        when(pdfReportService.generate(eq("report"), eq(null), anyMap()))
+                .thenThrow(new UnsupportedGlyphException("report", "v1", "title", 0x1F600));
+
+        mockMvc.perform(
+                        post("/api/reports/report")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fields\":{\"title\":\"😀\"}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("UNSUPPORTED_GLYPH"))
+                .andExpect(jsonPath("$.templateName").value("report"))
+                .andExpect(jsonPath("$.version").value("v1"))
+                .andExpect(jsonPath("$.fieldName").value("title"));
+    }
+
+    @Test
     void missingFieldsReturns400() throws Exception {
         mockMvc.perform(
                         post("/api/reports/report")

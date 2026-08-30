@@ -41,6 +41,11 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
             this.versions = Map.of("v1", new Version(file, fields));
         }
 
+        public Template(String file, String font, Map<String, FieldPlacement> fields) {
+            this.currentVersion = "v1";
+            this.versions = Map.of("v1", new Version(file, font, fields));
+        }
+
         public void setCurrentVersion(String currentVersion) {
             this.currentVersion = currentVersion;
         }
@@ -59,8 +64,14 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
     }
 
     /** An immutable, named revision of a template definition. */
-    public record Version(@NotBlank String file, @Valid Map<String, FieldPlacement> fields) {
+    public record Version(
+            @NotBlank String file, String font, @Valid Map<String, FieldPlacement> fields) {
 
+        public Version(String file, Map<String, FieldPlacement> fields) {
+            this(file, null, fields);
+        }
+
+        @ConstructorBinding
         public Version {
             if (fields == null) {
                 fields = Map.of();

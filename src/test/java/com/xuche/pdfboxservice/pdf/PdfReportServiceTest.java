@@ -85,6 +85,27 @@ class PdfReportServiceTest {
     }
 
     @Test
+    void rendersUnicodeWithConfiguredTemplateFont() throws Exception {
+        Map<String, FieldPlacement> fields =
+                Map.of("title", new FieldPlacement(1, 150f, 665f, 14f, 400f, null));
+        TemplateRegistry registry =
+                new TemplateRegistry(
+                        new PdfTemplateProperties(
+                                Map.of(
+                                        "report",
+                                        new Template(
+                                                "classpath:templates/report.pdf",
+                                                "classpath:templates/test-font.ttf",
+                                                fields))),
+                        new DefaultResourceLoader());
+
+        byte[] pdf = new PdfReportService(registry).fill("report", Map.of("title", "café"));
+        try (PDDocument filled = Loader.loadPDF(pdf)) {
+            assertThat(new PDFTextStripper().getText(filled)).contains("café");
+        }
+    }
+
+    @Test
     void overlaysCheckboxes() throws Exception {
         byte[] pdf =
                 service.fill(

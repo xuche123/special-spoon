@@ -66,6 +66,13 @@ class ReportExceptionHandler {
                 ReportError.of("TEXT_OVERFLOW", exception.getMessage(), exception));
     }
 
+    @ExceptionHandler(UnsupportedGlyphException.class)
+    ResponseEntity<ReportError> unsupportedGlyph(UnsupportedGlyphException exception) {
+        return response(
+                HttpStatus.BAD_REQUEST,
+                ReportError.of("UNSUPPORTED_GLYPH", exception.getMessage(), exception));
+    }
+
     @ExceptionHandler(RequestLimitExceededException.class)
     ResponseEntity<ReportError> limit(RequestLimitExceededException exception) {
         return response(

@@ -1,5 +1,6 @@
 package com.xuche.pdfboxservice.pdf;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
@@ -109,6 +111,7 @@ class TemplateRegistry {
         } catch (IOException e) {
             throw new UncheckedIOException(e.getMessage(), e);
         }
+        byte[] fontBytes = resolveFont(version, template.font(), storage);
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             PDAcroForm form = document.getDocumentCatalog().getAcroForm();
             if (form != null && !form.getFields().isEmpty()) {
@@ -130,10 +133,32 @@ class TemplateRegistry {
                     name,
                     version,
                     pdfBytes,
+                    fontBytes,
                     Set.copyOf(placements.keySet()),
                     Map.copyOf(placements));
         } catch (IOException e) {
             throw new UncheckedIOException("failed to parse " + template.file(), e);
+        }
+    }
+
+    private byte[] resolveFont(String version, String location, TemplateStorage storage) {
+        if (location == null || location.isBlank()) return null;
+        if (!location.startsWith("classpath:") || !location.toLowerCase().endsWith(".ttf")) {
+            throw new IllegalStateException(
+                    "version '" + version + "' font must be a classpath TTF resource");
+        }
+        byte[] bytes;
+        try {
+            bytes = storage.read(location);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e.getMessage(), e);
+        }
+        try (PDDocument document = new PDDocument()) {
+            PDType0Font.load(document, new ByteArrayInputStream(bytes));
+            return bytes;
+        } catch (IOException | RuntimeException e) {
+            throw new IllegalStateException(
+                    "version '" + version + "' font is not a valid TTF resource", e);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.xuche.pdfboxservice.pdf;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -11,6 +12,8 @@ import java.util.TreeSet;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -95,7 +98,12 @@ class PdfReportService {
         }
 
         try (PDDocument document = Loader.loadPDF(template.pdfBytes())) {
-            overlayFields(templateName, document, template, fields);
+            PDFont font =
+                    template.fontBytes() == null
+                            ? DEFAULT_FONT
+                            : PDType0Font.load(
+                                    document, new ByteArrayInputStream(template.fontBytes()));
+            overlayFields(templateName, document, template, fields, font);
 
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             document.save(output);
@@ -115,7 +123,8 @@ class PdfReportService {
             String templateName,
             PDDocument document,
             ResolvedTemplate template,
-            Map<String, ?> values)
+            Map<String, ?> values,
+            PDFont font)
             throws IOException {
         for (Map.Entry<String, ?> entry : values.entrySet()) {
             PdfTemplateProperties.FieldPlacement placement =
@@ -132,7 +141,7 @@ class PdfReportService {
                     }
                     drawText(
                             document,
-                            DEFAULT_FONT,
+                            font,
                             placement,
                             templateName,
                             template.version(),
@@ -149,7 +158,7 @@ class PdfReportService {
                                 entry.getValue());
                     }
                     if (checked) {
-                        drawCheckMark(document, DEFAULT_FONT, placement);
+                        drawCheckMark(document, font, placement);
                     }
                 }
             }
@@ -161,13 +170,14 @@ class PdfReportService {
      */
     private void drawText(
             PDDocument document,
-            PDType1Font font,
+            PDFont font,
             PdfTemplateProperties.FieldPlacement placement,
             String templateName,
             String version,
             String fieldName,
             String value)
             throws IOException {
+        validateGlyphs(font, templateName, version, fieldName, value);
         float fontSize = configuredFontSize(placement);
         if (placement.maxWidth() == null || placement.maxHeight() == null || value.isEmpty()) {
             drawSingleLineText(document, font, placement, value, fontSize);
@@ -192,7 +202,7 @@ class PdfReportService {
 
     private void drawSingleLineText(
             PDDocument document,
-            PDType1Font font,
+            PDFont font,
             PdfTemplateProperties.FieldPlacement placement,
             String value,
             float fontSize)
@@ -206,7 +216,7 @@ class PdfReportService {
         drawValue(document, font, placement, value, fontSize);
     }
 
-    private List<String> wrapText(PDType1Font font, String value, float fontSize, float maxWidth)
+    private List<String> wrapText(PDFont font, String value, float fontSize, float maxWidth)
             throws IOException {
         List<String> lines = new ArrayList<>();
         for (String paragraph : value.split("\\n", -1)) {
@@ -232,8 +242,8 @@ class PdfReportService {
         return lines;
     }
 
-    private List<String> splitLongWord(
-            PDType1Font font, String word, float fontSize, float maxWidth) throws IOException {
+    private List<String> splitLongWord(PDFont font, String word, float fontSize, float maxWidth)
+            throws IOException {
         List<String> parts = new ArrayList<>();
         String current = "";
         for (int offset = 0; offset < word.length(); offset++) {
@@ -251,13 +261,11 @@ class PdfReportService {
         return parts;
     }
 
-    private static float textWidth(PDType1Font font, String value, float fontSize)
-            throws IOException {
+    private static float textWidth(PDFont font, String value, float fontSize) throws IOException {
         return font.getStringWidth(value) / 1000f * fontSize;
     }
 
-    private static boolean widthExceeds(
-            PDType1Font font, String value, float fontSize, float maxWidth) {
+    private static boolean widthExceeds(PDFont font, String value, float fontSize, float maxWidth) {
         try {
             return textWidth(font, value, fontSize) > maxWidth;
         } catch (IOException e) {
@@ -275,7 +283,7 @@ class PdfReportService {
 
     /** Draws the check mark for a checked checkbox at the placement coordinates. */
     private void drawCheckMark(
-            PDDocument document, PDType1Font font, PdfTemplateProperties.FieldPlacement placement)
+            PDDocument document, PDFont font, PdfTemplateProperties.FieldPlacement placement)
             throws IOException {
         drawValue(document, font, placement, CHECK_MARK, configuredFontSize(placement));
     }
@@ -284,10 +292,23 @@ class PdfReportService {
         return placement.fontSize() != null ? placement.fontSize() : DEFAULT_FONT_SIZE;
     }
 
+    private void validateGlyphs(
+            PDFont font, String templateName, String version, String fieldName, String value)
+            throws IOException {
+        if (!(font instanceof org.apache.pdfbox.pdmodel.font.PDType0Font type0Font)) return;
+        for (int offset = 0; offset < value.length(); ) {
+            int codePoint = value.codePointAt(offset);
+            if (!type0Font.hasGlyph(codePoint)) {
+                throw new UnsupportedGlyphException(templateName, version, fieldName, codePoint);
+            }
+            offset += Character.charCount(codePoint);
+        }
+    }
+
     /** The drawing primitive: renders the value at the placement coordinates and font size. */
     private void drawValue(
             PDDocument document,
-            PDType1Font font,
+            PDFont font,
             PdfTemplateProperties.FieldPlacement placement,
             String value,
             float fontSize)
@@ -297,7 +318,7 @@ class PdfReportService {
 
     private void drawValue(
             PDDocument document,
-            PDType1Font font,
+            PDFont font,
             PdfTemplateProperties.FieldPlacement placement,
             String value,
             float fontSize,
