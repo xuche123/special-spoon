@@ -39,6 +39,24 @@ Responses:
 | `400` | Body missing `fields`, a field name the template doesn't support, or a value of the wrong JSON type for the field (response `message` explains) |
 | `404` | `{templateName}` is not in the supported template registry |
 
+### Preview a template
+
+Template previews are disabled by default and are intended for development or administrative use.
+Enable them explicitly with `pdf.preview.enabled: true`, then call:
+
+```
+POST /api/template-previews/{templateName}?version=<version>&format=<pdf|json>
+Content-Type: application/json
+
+{"fields":{"title":"Sample preview"}}
+```
+
+The version defaults to the template's current version. Omitted text fields render as an empty
+string and omitted checkboxes as `false`. PDF responses are inline and, like JSON responses, include
+`X-Template-Version`. JSON responses include the selected version and resolved field placement,
+type, font, and value metadata. When disabled, the endpoint returns the structured
+`TEMPLATE_PREVIEW_DISABLED` error without rendering a template.
+
 ### Examples
 
 ```bash

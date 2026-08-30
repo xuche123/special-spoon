@@ -14,6 +14,7 @@ class ReportWebConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(requestLimitInterceptor).addPathPatterns("/api/reports/**");
+        registry.addInterceptor(requestLimitInterceptor)
+                .addPathPatterns("/api/reports/**", "/api/template-previews/**");
     }
 }

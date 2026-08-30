@@ -17,10 +17,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ReportController.class)
+@TestPropertySource(properties = "pdf.preview.enabled=true")
 class ReportControllerTest {
 
     @Autowired private MockMvc mockMvc;
@@ -113,5 +115,83 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"))
                 .andExpect(jsonPath("$.requestId").isNotEmpty())
                 .andExpect(jsonPath("$.trace").doesNotExist());
+    }
+
+    @Test
+    void returnsInlinePdfPreviewWithSelectedVersion() throws Exception {
+        byte[] pdf = "%PDF-1.7 preview".getBytes(StandardCharsets.UTF_8);
+        when(pdfReportService.preview(eq("report"), eq("v2"), anyMap()))
+                .thenReturn(
+                        new PdfReportService.TemplatePreview(
+                                new PdfReportService.GeneratedReport(pdf, "v2"),
+                                java.util.List.of()));
+
+        mockMvc.perform(
+                        post("/api/template-previews/report?version=v2")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fields\":{}}"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("X-Template-Version", "v2"))
+                .andExpect(
+                        header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("inline")))
+                .andExpect(content().bytes(pdf));
+    }
+
+    @Test
+    void returnsJsonPreviewMetadata() throws Exception {
+        when(pdfReportService.preview(eq("report"), eq(null), anyMap()))
+                .thenReturn(
+                        new PdfReportService.TemplatePreview(
+                                new PdfReportService.GeneratedReport(new byte[0], "v1"),
+                                java.util.List.of(
+                                        new PdfReportService.FieldPreview(
+                                                "title",
+                                                1,
+                                                150f,
+                                                665f,
+                                                14f,
+                                                400f,
+                                                null,
+                                                null,
+                                                PdfTemplateProperties.TextAlignment.LEFT,
+                                                PdfTemplateProperties.TextOverflow.REJECT,
+                                                PdfTemplateProperties.FieldType.TEXT,
+                                                "Helvetica",
+                                                "Hello"))));
+
+        mockMvc.perform(
+                        post("/api/template-previews/report?format=json")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fields\":{}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.templateVersion").value("v1"))
+                .andExpect(jsonPath("$.fields[0].name").value("title"))
+                .andExpect(jsonPath("$.fields[0].page").value(1))
+                .andExpect(jsonPath("$.fields[0].x").value(150.0))
+                .andExpect(jsonPath("$.fields[0].y").value(665.0))
+                .andExpect(jsonPath("$.fields[0].type").value("TEXT"))
+                .andExpect(jsonPath("$.fields[0].font").value("Helvetica"))
+                .andExpect(jsonPath("$.fields[0].value").value("Hello"));
+    }
+
+    @Test
+    void missingPreviewFieldsReturns400() throws Exception {
+        mockMvc.perform(
+                        post("/api/template-previews/report")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
+    }
+
+    @Test
+    void unsupportedPreviewFormatReturns400() throws Exception {
+        mockMvc.perform(
+                        post("/api/template-previews/report?format=xml")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fields\":{}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
     }
 }

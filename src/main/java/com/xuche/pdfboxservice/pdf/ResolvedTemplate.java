@@ -12,5 +12,6 @@ record ResolvedTemplate(
         String version,
         byte[] pdfBytes,
         byte[] fontBytes,
+        String font,
         Set<String> knownFields,
         Map<String, PdfTemplateProperties.FieldPlacement> placements) {}

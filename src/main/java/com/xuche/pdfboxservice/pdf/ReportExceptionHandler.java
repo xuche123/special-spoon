@@ -45,6 +45,20 @@ class ReportExceptionHandler {
                 ReportError.of("TEMPLATE_VERSION_NOT_FOUND", exception.getMessage(), exception));
     }
 
+    @ExceptionHandler(TemplatePreviewDisabledException.class)
+    ResponseEntity<ReportError> previewDisabled(TemplatePreviewDisabledException exception) {
+        return response(
+                HttpStatus.NOT_FOUND,
+                ReportError.simple("TEMPLATE_PREVIEW_DISABLED", "Template previews are disabled."));
+    }
+
+    @ExceptionHandler(UnsupportedPreviewFormatException.class)
+    ResponseEntity<ReportError> invalidPreviewFormat(UnsupportedPreviewFormatException exception) {
+        return response(
+                HttpStatus.BAD_REQUEST,
+                ReportError.simple("MALFORMED_REQUEST", "The report request is malformed."));
+    }
+
     @ExceptionHandler(UnknownTemplateFieldException.class)
     ResponseEntity<ReportError> unknownField(UnknownTemplateFieldException exception) {
         return response(

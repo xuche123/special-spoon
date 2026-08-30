@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,7 +118,68 @@ class PdfReportService {
         }
     }
 
+    TemplatePreview preview(String templateName, String version, Map<String, ?> suppliedFields) {
+        ResolvedTemplate template = templateRegistry.get(templateName, version);
+        if (template == null) {
+            if (version == null) {
+                throw new TemplateNotFoundException(templateName);
+            }
+            throw new TemplateVersionNotFoundException(templateName, version);
+        }
+
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.putAll(suppliedFields);
+        for (Map.Entry<String, PdfTemplateProperties.FieldPlacement> entry :
+                template.placements().entrySet()) {
+            Object defaultValue =
+                    entry.getValue().type() == PdfTemplateProperties.FieldType.CHECKBOX
+                            ? false
+                            : "";
+            values.putIfAbsent(entry.getKey(), defaultValue);
+        }
+
+        GeneratedReport report = generate(templateName, version, values);
+        List<FieldPreview> fields = new ArrayList<>();
+        for (Map.Entry<String, PdfTemplateProperties.FieldPlacement> entry :
+                template.placements().entrySet()) {
+            PdfTemplateProperties.FieldPlacement placement = entry.getValue();
+            fields.add(
+                    new FieldPreview(
+                            entry.getKey(),
+                            placement.page(),
+                            placement.x(),
+                            placement.y(),
+                            configuredFontSize(placement),
+                            placement.maxWidth(),
+                            placement.maxHeight(),
+                            placement.lineHeight(),
+                            placement.alignment(),
+                            placement.overflow(),
+                            placement.type(),
+                            template.font(),
+                            values.get(entry.getKey())));
+        }
+        return new TemplatePreview(report, fields);
+    }
+
     record GeneratedReport(byte[] pdfBytes, String templateVersion) {}
+
+    record TemplatePreview(GeneratedReport report, List<FieldPreview> fields) {}
+
+    record FieldPreview(
+            String name,
+            Integer page,
+            Float x,
+            Float y,
+            float fontSize,
+            Float maxWidth,
+            Float maxHeight,
+            Float lineHeight,
+            PdfTemplateProperties.TextAlignment alignment,
+            PdfTemplateProperties.TextOverflow overflow,
+            PdfTemplateProperties.FieldType type,
+            String font,
+            Object value) {}
 
     private void overlayFields(
             String templateName,

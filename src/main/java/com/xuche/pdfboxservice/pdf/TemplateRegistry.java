@@ -134,6 +134,9 @@ class TemplateRegistry {
                     version,
                     pdfBytes,
                     fontBytes,
+                    template.font() == null || template.font().isBlank()
+                            ? "Helvetica"
+                            : template.font(),
                     Set.copyOf(placements.keySet()),
                     Map.copyOf(placements));
         } catch (IOException e) {

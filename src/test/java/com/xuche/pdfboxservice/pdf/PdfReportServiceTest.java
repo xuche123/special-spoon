@@ -99,9 +99,17 @@ class PdfReportServiceTest {
                                                 fields))),
                         new DefaultResourceLoader());
 
-        byte[] pdf = new PdfReportService(registry).fill("report", Map.of("title", "café"));
+        PdfReportService unicodeService = new PdfReportService(registry);
+        byte[] pdf = unicodeService.fill("report", Map.of("title", "café"));
         try (PDDocument filled = Loader.loadPDF(pdf)) {
             assertThat(new PDFTextStripper().getText(filled)).contains("café");
+        }
+        PdfReportService.TemplatePreview preview =
+                unicodeService.preview("report", null, Map.of("title", "café"));
+        assertThat(preview.fields().getFirst().font())
+                .isEqualTo("classpath:templates/test-font.ttf");
+        try (PDDocument previewDocument = Loader.loadPDF(preview.report().pdfBytes())) {
+            assertThat(new PDFTextStripper().getText(previewDocument)).contains("café");
         }
     }
 
@@ -116,6 +124,34 @@ class PdfReportServiceTest {
             // Two boxes checked -> two X marks in the page content.
             String text = new PDFTextStripper().getText(filled);
             assertThat(text).contains("X");
+        }
+    }
+
+    @Test
+    void previewRendersDefaultsAndReturnsPlacementMetadata() throws Exception {
+        PdfReportService.TemplatePreview preview =
+                service.preview("report", null, Map.of("title", "Preview"));
+
+        assertThat(preview.report().templateVersion()).isEqualTo("v1");
+        assertThat(preview.fields())
+                .extracting(PdfReportService.FieldPreview::name)
+                .contains("title", "confidential");
+        assertThat(
+                        preview.fields().stream()
+                                .filter(field -> field.name().equals("title"))
+                                .findFirst()
+                                .orElseThrow()
+                                .value())
+                .isEqualTo("Preview");
+        assertThat(
+                        preview.fields().stream()
+                                .filter(field -> field.name().equals("confidential"))
+                                .findFirst()
+                                .orElseThrow()
+                                .value())
+                .isEqualTo(false);
+        try (PDDocument filled = Loader.loadPDF(preview.report().pdfBytes())) {
+            assertThat(new PDFTextStripper().getText(filled)).contains("Preview");
         }
     }
 

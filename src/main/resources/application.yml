@@ -9,6 +9,8 @@ server:
     include-message: never
 
 pdf:
+  preview:
+    enabled: false
   limits:
     max-request-body-bytes: 1048576
     max-fields: 100
