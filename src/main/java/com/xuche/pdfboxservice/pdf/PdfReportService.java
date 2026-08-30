@@ -53,9 +53,16 @@ class PdfReportService {
     }
 
     byte[] fill(String templateName, Map<String, ?> fields) {
-        ResolvedTemplate template = templateRegistry.get(templateName);
+        return generate(templateName, null, fields).pdfBytes();
+    }
+
+    GeneratedReport generate(String templateName, String version, Map<String, ?> fields) {
+        ResolvedTemplate template = templateRegistry.get(templateName, version);
         if (template == null) {
-            throw new TemplateNotFoundException(templateName);
+            if (version == null) {
+                throw new TemplateNotFoundException(templateName);
+            }
+            throw new TemplateVersionNotFoundException(templateName, version);
         }
 
         Set<String> unknownFields = new TreeSet<>(fields.keySet());
@@ -70,11 +77,13 @@ class PdfReportService {
 
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             document.save(output);
-            return output.toByteArray();
+            return new GeneratedReport(output.toByteArray(), template.version());
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to fill PDF template: " + templateName, e);
         }
     }
+
+    record GeneratedReport(byte[] pdfBytes, String templateVersion) {}
 
     private void overlayFields(
             String templateName,

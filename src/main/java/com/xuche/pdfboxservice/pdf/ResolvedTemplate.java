@@ -9,6 +9,7 @@ import java.util.Set;
  */
 record ResolvedTemplate(
         String name,
+        String version,
         byte[] pdfBytes,
         Set<String> knownFields,
         Map<String, PdfTemplateProperties.FieldPlacement> placements) {}

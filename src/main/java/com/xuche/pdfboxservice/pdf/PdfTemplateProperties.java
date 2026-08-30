@@ -29,9 +29,39 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
      * @param file location of the template PDF, e.g. {@code classpath:templates/report.pdf}
      * @param fields coordinate placements for the template's fields
      */
-    public record Template(@NotBlank String file, @Valid Map<String, FieldPlacement> fields) {
+    public static final class Template {
+        private String currentVersion;
+        @Valid private Map<String, Version> versions = Map.of();
 
-        public Template {
+        public Template() {}
+
+        /** Supports both the versioned shape and the original single-version test shape. */
+        public Template(String file, Map<String, FieldPlacement> fields) {
+            this.currentVersion = "v1";
+            this.versions = Map.of("v1", new Version(file, fields));
+        }
+
+        public void setCurrentVersion(String currentVersion) {
+            this.currentVersion = currentVersion;
+        }
+
+        public void setVersions(Map<String, Version> versions) {
+            this.versions = versions == null ? Map.of() : versions;
+        }
+
+        public String currentVersion() {
+            return currentVersion;
+        }
+
+        public Map<String, Version> versions() {
+            return versions;
+        }
+    }
+
+    /** An immutable, named revision of a template definition. */
+    public record Version(@NotBlank String file, @Valid Map<String, FieldPlacement> fields) {
+
+        public Version {
             if (fields == null) {
                 fields = Map.of();
             }

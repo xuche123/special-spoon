@@ -11,51 +11,62 @@ import java.util.regex.Pattern;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
-import org.springframework.core.io.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 
-/**
- * Validated registry of the supported report templates, built once at startup from {@link
- * PdfTemplateProperties}.
- *
- * <p>Startup fails fast (listing every problem) when a template is misconfigured:
- *
- * <ul>
- *   <li>the PDF file must exist and load
- *   <li>the PDF must be form-free (AcroForm templates are not supported)
- *   <li>it must declare coordinate placements, and every placement must be complete ({@code page},
- *       {@code x}, {@code y}) and within the document's page count
- * </ul>
- */
+/** Startup-resolved registry of immutable template versions. */
 @Component
 class TemplateRegistry {
-
-    /** Template names appear in URLs, so keep them strict: lowercase alphanumerics and hyphens. */
     private static final Pattern TEMPLATE_NAME = Pattern.compile("[a-z0-9][a-z0-9-]*");
 
-    private final Map<String, ResolvedTemplate> templates;
+    private final Map<String, Map<String, ResolvedTemplate>> templates;
+    private final Map<String, String> currentVersions;
+
+    @Autowired
+    TemplateRegistry(PdfTemplateProperties properties, TemplateStorage storage) {
+        ResolvedTemplates resolved = resolveConfiguredTemplates(properties.templates(), storage);
+        templates = resolved.templates();
+        currentVersions = resolved.currentVersions();
+    }
 
     TemplateRegistry(PdfTemplateProperties properties, ResourceLoader resourceLoader) {
-        this.templates = resolveConfiguredTemplates(properties.templates(), resourceLoader);
+        this(properties, new ClasspathTemplateStorage(resourceLoader));
     }
 
-    /** Returns the template, or {@code null} if the name is not in the supported list. */
+    ResolvedTemplate get(String name, String requestedVersion) {
+        Map<String, ResolvedTemplate> versions = templates.get(name);
+        if (versions == null) {
+            return null;
+        }
+        String version = requestedVersion == null ? currentVersions.get(name) : requestedVersion;
+        return versions.get(version);
+    }
+
     ResolvedTemplate get(String name) {
-        return templates.get(name);
+        return get(name, null);
     }
 
-    private Map<String, ResolvedTemplate> resolveConfiguredTemplates(
-            Map<String, PdfTemplateProperties.Template> configuredTemplates,
-            ResourceLoader resourceLoader) {
-        Map<String, ResolvedTemplate> resolved = new LinkedHashMap<>();
+    private ResolvedTemplates resolveConfiguredTemplates(
+            Map<String, PdfTemplateProperties.Template> configured, TemplateStorage storage) {
+        Map<String, Map<String, ResolvedTemplate>> resolved = new LinkedHashMap<>();
+        Map<String, String> currents = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
-        for (Map.Entry<String, PdfTemplateProperties.Template> entry :
-                configuredTemplates.entrySet()) {
+        for (Map.Entry<String, PdfTemplateProperties.Template> entry : configured.entrySet()) {
             try {
-                resolved.put(
-                        entry.getKey(),
-                        resolveTemplate(entry.getKey(), entry.getValue(), resourceLoader));
+                String name = entry.getKey();
+                PdfTemplateProperties.Template template = entry.getValue();
+                validateTemplateName(name);
+                validateVersions(template);
+                Map<String, ResolvedTemplate> versions = new LinkedHashMap<>();
+                for (Map.Entry<String, PdfTemplateProperties.Version> version :
+                        template.versions().entrySet()) {
+                    versions.put(
+                            version.getKey(),
+                            resolveTemplate(name, version.getKey(), version.getValue(), storage));
+                }
+                resolved.put(name, Map.copyOf(versions));
+                currents.put(name, template.currentVersion());
             } catch (IllegalStateException | UncheckedIOException e) {
                 errors.add("pdf.templates." + entry.getKey() + ": " + e.getMessage());
             }
@@ -64,24 +75,40 @@ class TemplateRegistry {
             throw new IllegalStateException(
                     "Invalid template configuration:\n - " + String.join("\n - ", errors));
         }
-        return Map.copyOf(resolved);
+        return new ResolvedTemplates(Map.copyOf(resolved), Map.copyOf(currents));
+    }
+
+    private void validateVersions(PdfTemplateProperties.Template template) {
+        if (template == null
+                || template.currentVersion() == null
+                || template.currentVersion().isBlank()) {
+            throw new IllegalStateException("currentVersion is required");
+        }
+        if (template.versions() == null || template.versions().isEmpty()) {
+            throw new IllegalStateException("at least one immutable version is required");
+        }
+        if (!template.versions().containsKey(template.currentVersion())) {
+            throw new IllegalStateException(
+                    "currentVersion '" + template.currentVersion() + "' is not configured");
+        }
+        for (String version : template.versions().keySet()) {
+            if (version == null || version.isBlank() || version.contains("/")) {
+                throw new IllegalStateException("version identifiers must be non-blank and opaque");
+            }
+        }
     }
 
     private ResolvedTemplate resolveTemplate(
-            String name, PdfTemplateProperties.Template template, ResourceLoader resourceLoader) {
-        validateTemplateName(name);
-        Resource pdf = resourceLoader.getResource(template.file());
-        if (!pdf.exists()) {
-            throw new IllegalStateException("PDF file not found: " + template.file());
-        }
-
+            String name,
+            String version,
+            PdfTemplateProperties.Version template,
+            TemplateStorage storage) {
         byte[] pdfBytes;
         try {
-            pdfBytes = pdf.getContentAsByteArray();
+            pdfBytes = storage.read(template.file());
         } catch (IOException e) {
-            throw new UncheckedIOException("failed to read " + template.file(), e);
+            throw new UncheckedIOException(e.getMessage(), e);
         }
-
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             PDAcroForm form = document.getDocumentCatalog().getAcroForm();
             if (form != null && !form.getFields().isEmpty()) {
@@ -89,10 +116,7 @@ class TemplateRegistry {
                         "PDF has an AcroForm; only form-free (overlay) templates are supported");
             }
             if (template.fields().isEmpty()) {
-                throw new IllegalStateException(
-                        "coordinate placements are required under pdf.templates."
-                                + name
-                                + ".fields");
+                throw new IllegalStateException("coordinate placements are required under fields");
             }
             Map<String, PdfTemplateProperties.FieldPlacement> placements = new LinkedHashMap<>();
             for (Map.Entry<String, PdfTemplateProperties.FieldPlacement> field :
@@ -103,7 +127,11 @@ class TemplateRegistry {
                                 field.getKey(), field.getValue(), document.getNumberOfPages()));
             }
             return new ResolvedTemplate(
-                    name, pdfBytes, Set.copyOf(placements.keySet()), Map.copyOf(placements));
+                    name,
+                    version,
+                    pdfBytes,
+                    Set.copyOf(placements.keySet()),
+                    Map.copyOf(placements));
         } catch (IOException e) {
             throw new UncheckedIOException("failed to parse " + template.file(), e);
         }
@@ -117,9 +145,7 @@ class TemplateRegistry {
 
     private PdfTemplateProperties.FieldPlacement validatePlacement(
             String fieldName, PdfTemplateProperties.FieldPlacement placement, int pageCount) {
-        if (fieldName.isBlank()) {
-            throw new IllegalStateException("field name must not be blank");
-        }
+        if (fieldName.isBlank()) throw new IllegalStateException("field name must not be blank");
         Integer page = placement.page();
         if (page == null || page < 1 || page > pageCount) {
             throw new IllegalStateException(
@@ -127,7 +153,7 @@ class TemplateRegistry {
                             + fieldName
                             + "': page must be between 1 and "
                             + pageCount
-                            + " (the document's page count), got "
+                            + ", got "
                             + page);
         }
         if (placement.x() == null || placement.y() == null) {
@@ -140,16 +166,12 @@ class TemplateRegistry {
         if (placement.lineHeight() != null
                 && (placement.maxWidth() == null || placement.maxHeight() == null)) {
             throw new IllegalStateException(
-                    "field '"
-                            + fieldName
-                            + "': lineHeight requires maxWidth and maxHeight for a multiline text field");
-        }
-        if (placement.fontSize() != null && placement.fontSize() <= 0) {
-            throw new IllegalStateException("field '" + fieldName + "': fontSize must be positive");
-        }
-        if (placement.maxWidth() != null && placement.maxWidth() <= 0) {
-            throw new IllegalStateException("field '" + fieldName + "': maxWidth must be positive");
+                    "field '" + fieldName + "': lineHeight requires maxWidth and maxHeight");
         }
         return placement;
     }
+
+    private record ResolvedTemplates(
+            Map<String, Map<String, ResolvedTemplate>> templates,
+            Map<String, String> currentVersions) {}
 }

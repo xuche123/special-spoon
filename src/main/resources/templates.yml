@@ -1,113 +1,31 @@
-# Registry of supported report templates. Adding a template means adding an entry here plus a
-# form-free PDF under src/main/resources/templates/. The TemplateRegistry validates every entry
-# at startup:
-#   - the PDF file must exist and load, and must not contain an AcroForm
-#   - every field must declare complete, in-bounds coordinate placements
+# Immutable template versions. The current-version is used when the request omits ?version.
 pdf:
   templates:
     report:
-      file: classpath:templates/report.pdf
-      fields:
-        title:
-          page: 1
-          x: 150
-          y: 665
-          font-size: 14
-          max-width: 400
-        author:
-          page: 1
-          x: 150
-          y: 615
-          font-size: 14
-          max-width: 400
-        date:
-          page: 1
-          x: 150
-          y: 565
-          font-size: 14
-          max-width: 400
-        summary:
-          page: 1
-          x: 150
-          y: 525
-          font-size: 12
-          max-width: 400
-          max-height: 80
-          line-height: 14
-          alignment: left
-          overflow: reject
-        confidential:
-          page: 2
-          x: 73
-          y: 679
-          font-size: 12
-          type: checkbox
-        reviewed:
-          page: 2
-          x: 73
-          y: 639
-          font-size: 12
-          type: checkbox
-        approved:
-          page: 2
-          x: 73
-          y: 599
-          font-size: 12
-          type: checkbox
-        notes:
-          page: 3
-          x: 150
-          y: 665
-          font-size: 12
-          max-width: 400
+      current-version: v1
+      versions:
+        v1:
+          file: classpath:templates/report.pdf
+          fields:
+            title: {page: 1, x: 150, y: 665, font-size: 14, max-width: 400}
+            author: {page: 1, x: 150, y: 615, font-size: 14, max-width: 400}
+            date: {page: 1, x: 150, y: 565, font-size: 14, max-width: 400}
+            summary: {page: 1, x: 150, y: 525, font-size: 12, max-width: 400, max-height: 80, line-height: 14, alignment: left, overflow: reject}
+            confidential: {page: 2, x: 73, y: 679, font-size: 12, type: checkbox}
+            reviewed: {page: 2, x: 73, y: 639, font-size: 12, type: checkbox}
+            approved: {page: 2, x: 73, y: 599, font-size: 12, type: checkbox}
+            notes: {page: 3, x: 150, y: 665, font-size: 12, max-width: 400}
     certificate:
-      file: classpath:templates/certificate.pdf
-      fields:
-        recipient:
-          page: 1
-          x: 180
-          y: 400
-          font-size: 28
-          max-width: 432
-        course:
-          page: 1
-          x: 180
-          y: 310
-          font-size: 18
-          max-width: 432
-        date:
-          page: 1
-          x: 235
-          y: 240
-          font-size: 12
-          max-width: 180
-        module-basics:
-          page: 2
-          x: 189
-          y: 478
-          font-size: 14
-          type: checkbox
-        module-advanced:
-          page: 2
-          x: 189
-          y: 438
-          font-size: 14
-          type: checkbox
-        module-project:
-          page: 2
-          x: 189
-          y: 398
-          font-size: 14
-          type: checkbox
-        instructor-name:
-          page: 3
-          x: 180
-          y: 450
-          font-size: 16
-          max-width: 300
-        instructor-date:
-          page: 3
-          x: 240
-          y: 390
-          font-size: 12
-          max-width: 170
+      current-version: v1
+      versions:
+        v1:
+          file: classpath:templates/certificate.pdf
+          fields:
+            recipient: {page: 1, x: 180, y: 400, font-size: 28, max-width: 432}
+            course: {page: 1, x: 180, y: 310, font-size: 18, max-width: 432}
+            date: {page: 1, x: 235, y: 240, font-size: 12, max-width: 180}
+            module-basics: {page: 2, x: 189, y: 478, font-size: 14, type: checkbox}
+            module-advanced: {page: 2, x: 189, y: 438, font-size: 14, type: checkbox}
+            module-project: {page: 2, x: 189, y: 398, font-size: 14, type: checkbox}
+            instructor-name: {page: 3, x: 180, y: 450, font-size: 16, max-width: 300}
+            instructor-date: {page: 3, x: 240, y: 390, font-size: 12, max-width: 170}

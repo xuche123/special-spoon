@@ -24,6 +24,10 @@ Content-Type: application/json
 }
 ```
 
+Requests may select an immutable template version with `?version=<version>`. When omitted, the
+template's configured `current-version` is used. Successful responses include the selected version
+in `X-Template-Version`; an unknown version returns `404`.
+
 - Text fields take JSON strings; checkbox fields take JSON booleans (`true`/`false`).
   Values of the wrong JSON type are rejected with a clear message.
 
@@ -57,35 +61,38 @@ curl -X POST http://localhost:8080/api/reports/certificate \
 
 Supported templates are declared in `src/main/resources/templates.yml` (imported via
 `spring.config.import` in `application.yml`) and bound to the type-safe
-`PdfTemplateProperties` record:
+`PdfTemplateProperties` configuration type:
 
 ```yaml
 pdf:
   templates:
     report:
-      file: classpath:templates/report.pdf
-      fields:
-        title:
-          page: 1                          # 1-based
-          x: 150                           # points, origin at bottom-left
-          y: 665                           # baseline of the value
-          font-size: 14                    # default 12
-          max-width: 400                   # optional: text wider than this is shrunk to fit
-        summary:
-          page: 1
-          x: 150
-          y: 525
-          font-size: 12
-          max-width: 400
-          max-height: 80                  # enables multiline wrapping
-          line-height: 14                 # optional: defaults to 1.2 * font-size
-          alignment: left                 # left (default) | center | right
-          overflow: reject                # currently the only supported policy
-        confidential:
-          page: 2
-          x: 73
-          y: 679
-          type: checkbox                   # text (default) | checkbox: draws X when value is true
+      current-version: v1
+      versions:
+        v1:
+          file: classpath:templates/report.pdf
+          fields:
+            title:
+              page: 1                          # 1-based
+              x: 150                           # points, origin at bottom-left
+              y: 665                           # baseline of the value
+              font-size: 14                    # default 12
+              max-width: 400                   # optional: text wider than this is shrunk to fit
+            summary:
+              page: 1
+              x: 150
+              y: 525
+              font-size: 12
+              max-width: 400
+              max-height: 80                  # enables multiline wrapping
+              line-height: 14                 # optional: defaults to 1.2 * font-size
+              alignment: left                 # left (default) | center (default) | right
+              overflow: reject                # currently the only supported policy
+            confidential:
+              page: 2
+              x: 73
+              y: 679
+              type: checkbox                   # text (default) | checkbox: draws X when true
 ```
 
 At startup the `TemplateRegistry` inspects each PDF and **fails fast** (listing every problem)
