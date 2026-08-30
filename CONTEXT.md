@@ -42,3 +42,7 @@ _Avoid_: mock PDF, form preview
 **Structured error**:
 A stable machine-readable error response describing why an API request could not be completed without exposing internal diagnostics.
 _Avoid_: error string, exception response
+
+**Request admission**:
+The checks that determine whether a report request is acceptable before report generation begins, including its declared and received size.
+_Avoid_: request filter, request interceptor
