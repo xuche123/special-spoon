@@ -1,9 +1,9 @@
 package com.xuche.pdfboxservice.pdf.web;
 
+import com.xuche.pdfboxservice.pdf.limits.PdfRequestLimits;
 import com.xuche.pdfboxservice.pdf.limits.RequestLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -12,9 +12,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 final class ReportRequestAdmissionInterceptor implements HandlerInterceptor {
     private final long maxRequestBodyBytes;
 
-    ReportRequestAdmissionInterceptor(
-            @Value("${pdf.limits.max-request-body-bytes:1048576}") long maxRequestBodyBytes) {
-        this.maxRequestBodyBytes = maxRequestBodyBytes;
+    ReportRequestAdmissionInterceptor(PdfRequestLimits limits) {
+        this.maxRequestBodyBytes = limits.maxRequestBodyBytes();
     }
 
     @Override

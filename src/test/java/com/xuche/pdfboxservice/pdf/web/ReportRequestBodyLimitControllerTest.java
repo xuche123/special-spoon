@@ -12,14 +12,20 @@ import com.xuche.pdfboxservice.pdf.rendering.PdfReportService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ReportController.class)
+@Import(TestPdfRequestLimitsConfiguration.class)
 @TestPropertySource(
-        properties = {"pdf.preview.enabled=true", "pdf.limits.max-request-body-bytes=16"})
+        properties = {
+            "pdf.preview.enabled=true",
+            "pdf.limits.max-request-body-bytes=1048576",
+            "test.pdf.limits.max-request-body-bytes=16"
+        })
 class ReportRequestBodyLimitControllerTest {
 
     @Autowired private MockMvc mockMvc;
