@@ -84,7 +84,8 @@ class ReportExceptionHandler {
     ResponseEntity<ReportError> invalidConfiguration(IllegalStateException exception) {
         return response(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                ReportError.simple("TEMPLATE_CONFIGURATION_INVALID", "Template configuration is invalid."));
+                ReportError.simple(
+                        "TEMPLATE_CONFIGURATION_INVALID", "Template configuration is invalid."));
     }
 
     @ExceptionHandler(Exception.class)
