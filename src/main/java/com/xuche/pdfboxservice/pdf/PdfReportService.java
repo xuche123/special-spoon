@@ -13,6 +13,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -47,9 +48,16 @@ class PdfReportService {
     private static final String CHECK_MARK = "X";
 
     private final TemplateRegistry templateRegistry;
+    private final PdfRequestLimits limits;
 
     PdfReportService(TemplateRegistry templateRegistry) {
+        this(templateRegistry, new PdfRequestLimits());
+    }
+
+    @Autowired
+    PdfReportService(TemplateRegistry templateRegistry, PdfRequestLimits limits) {
         this.templateRegistry = templateRegistry;
+        this.limits = limits;
     }
 
     byte[] fill(String templateName, Map<String, ?> fields) {
@@ -65,11 +73,25 @@ class PdfReportService {
             throw new TemplateVersionNotFoundException(templateName, version);
         }
 
+        if (fields.size() > limits.maxFields()) {
+            throw new RequestLimitExceededException(
+                    "The report contains too many fields.", templateName, null);
+        }
+        for (Map.Entry<String, ?> entry : fields.entrySet()) {
+            if (entry.getValue() instanceof String value
+                    && value.codePointCount(0, value.length()) > limits.maxTextCodePoints()) {
+                throw new RequestLimitExceededException(
+                        "The text value exceeds the configured size limit.",
+                        templateName,
+                        entry.getKey());
+            }
+        }
+
         Set<String> unknownFields = new TreeSet<>(fields.keySet());
         unknownFields.removeAll(template.knownFields());
         if (!unknownFields.isEmpty()) {
             throw new UnknownTemplateFieldException(
-                    templateName, unknownFields, template.knownFields());
+                    templateName, template.version(), unknownFields, template.knownFields());
         }
 
         try (PDDocument document = Loader.loadPDF(template.pdfBytes())) {
@@ -77,9 +99,13 @@ class PdfReportService {
 
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             document.save(output);
+            if (output.size() > limits.maxGeneratedPdfBytes()) {
+                throw new RequestLimitExceededException(
+                        "The generated PDF exceeds the configured size limit.", templateName, null);
+            }
             return new GeneratedReport(output.toByteArray(), template.version());
         } catch (IOException e) {
-            throw new UncheckedIOException("Failed to fill PDF template: " + templateName, e);
+            throw new PdfRenderingFailedException(templateName, template.version(), e);
         }
     }
 
@@ -98,14 +124,29 @@ class PdfReportService {
                 case TEXT -> {
                     if (!(entry.getValue() instanceof String text)) {
                         throw new InvalidFieldValueException(
-                                templateName, entry.getKey(), "a JSON string", entry.getValue());
+                                templateName,
+                                template.version(),
+                                entry.getKey(),
+                                "a JSON string",
+                                entry.getValue());
                     }
-                    drawText(document, DEFAULT_FONT, placement, templateName, entry.getKey(), text);
+                    drawText(
+                            document,
+                            DEFAULT_FONT,
+                            placement,
+                            templateName,
+                            template.version(),
+                            entry.getKey(),
+                            text);
                 }
                 case CHECKBOX -> {
                     if (!(entry.getValue() instanceof Boolean checked)) {
                         throw new InvalidFieldValueException(
-                                templateName, entry.getKey(), "a JSON boolean", entry.getValue());
+                                templateName,
+                                template.version(),
+                                entry.getKey(),
+                                "a JSON boolean",
+                                entry.getValue());
                     }
                     if (checked) {
                         drawCheckMark(document, DEFAULT_FONT, placement);
@@ -123,6 +164,7 @@ class PdfReportService {
             PDType1Font font,
             PdfTemplateProperties.FieldPlacement placement,
             String templateName,
+            String version,
             String fieldName,
             String value)
             throws IOException {
@@ -137,7 +179,7 @@ class PdfReportService {
         if (lines.stream()
                         .anyMatch(line -> widthExceeds(font, line, fontSize, placement.maxWidth()))
                 || lines.size() * lineHeight > placement.maxHeight()) {
-            throw new TextOverflowException(templateName, fieldName);
+            throw new TextOverflowException(templateName, version, fieldName);
         }
         for (int index = 0; index < lines.size(); index++) {
             String line = lines.get(index);

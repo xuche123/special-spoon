@@ -4,10 +4,16 @@ spring:
   config:
     import: classpath:templates.yml
 
-# Surface validation messages (e.g. unknown template fields) in error responses.
 server:
   error:
-    include-message: always
+    include-message: never
+
+pdf:
+  limits:
+    max-request-body-bytes: 1048576
+    max-fields: 100
+    max-text-code-points: 100000
+    max-generated-pdf-bytes: 26214400
 
 management:
   endpoints:

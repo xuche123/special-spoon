@@ -9,6 +9,7 @@ import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.Template;
 import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.TextAlignment;
 import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.TextOverflow;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.pdfbox.Loader;
@@ -235,6 +236,23 @@ class PdfReportServiceTest {
                 .isInstanceOf(UnknownTemplateFieldException.class)
                 .hasMessageContaining("bogus")
                 .hasMessageContaining("report");
+    }
+
+    @Test
+    void rejectsNullValuesAndConfiguredLimits() {
+        Map<String, Object> nullValue = new HashMap<>();
+        nullValue.put("title", null);
+        assertThatThrownBy(() -> service.fill("report", nullValue))
+                .isInstanceOf(InvalidFieldValueException.class);
+
+        PdfReportService limited =
+                new PdfReportService(newRegistry(), new PdfRequestLimits(1024, 1, 3, 25_000_000));
+        assertThatThrownBy(() -> limited.fill("report", Map.of("title", "abcd")))
+                .isInstanceOf(RequestLimitExceededException.class)
+                .hasMessageContaining("text value");
+        assertThatThrownBy(() -> limited.fill("report", Map.of("title", "a", "author", "b")))
+                .isInstanceOf(RequestLimitExceededException.class)
+                .hasMessageContaining("too many fields");
     }
 
     @Test

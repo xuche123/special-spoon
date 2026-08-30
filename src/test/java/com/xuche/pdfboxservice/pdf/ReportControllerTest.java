@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
@@ -55,7 +56,9 @@ class ReportControllerTest {
                         post("/api/reports/nope")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"fields\":{}}"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("TEMPLATE_NOT_FOUND"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
     }
 
     @Test
@@ -69,7 +72,9 @@ class ReportControllerTest {
                         post("/api/reports/report")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"fields\":{\"bogus\":\"x\"}}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"))
+                .andExpect(jsonPath("$.templateName").value("report"));
     }
 
     @Test
@@ -78,6 +83,19 @@ class ReportControllerTest {
                         post("/api/reports/report")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
+    }
+
+    @Test
+    void malformedJsonReturnsSafeStructuredError() throws Exception {
+        mockMvc.perform(
+                        post("/api/reports/report")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{not-json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist());
     }
 }

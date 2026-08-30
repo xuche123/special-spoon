@@ -1,14 +1,19 @@
 package com.xuche.pdfboxservice.pdf;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
 /** Thrown when a field value has the wrong JSON type for the field's type. */
-@ResponseStatus(HttpStatus.BAD_REQUEST)
-public class InvalidFieldValueException extends RuntimeException {
+public class InvalidFieldValueException extends ReportException {
 
     public InvalidFieldValueException(
             String templateName, String fieldName, String expected, Object actualValue) {
+        this(templateName, null, fieldName, expected, actualValue);
+    }
+
+    public InvalidFieldValueException(
+            String templateName,
+            String version,
+            String fieldName,
+            String expected,
+            Object actualValue) {
         super(
                 "Invalid value for field '"
                         + fieldName
@@ -17,7 +22,10 @@ public class InvalidFieldValueException extends RuntimeException {
                         + "': expected "
                         + expected
                         + " but got "
-                        + describe(actualValue));
+                        + describe(actualValue),
+                templateName,
+                version,
+                fieldName);
     }
 
     private static String describe(Object value) {
