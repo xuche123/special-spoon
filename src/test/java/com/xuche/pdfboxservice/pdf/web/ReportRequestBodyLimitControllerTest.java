@@ -21,11 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(ReportController.class)
 @Import(TestPdfRequestLimitsConfiguration.class)
 @TestPropertySource(
-        properties = {
-            "pdf.preview.enabled=true",
-            "pdf.limits.max-request-body-bytes=1048576",
-            "test.pdf.limits.max-request-body-bytes=16"
-        })
+        properties = {"pdf.preview.enabled=true", "pdf.limits.max-request-body-bytes=16"})
 class ReportRequestBodyLimitControllerTest {
 
     @Autowired private MockMvc mockMvc;

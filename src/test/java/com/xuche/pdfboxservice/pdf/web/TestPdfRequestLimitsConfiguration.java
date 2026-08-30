@@ -9,7 +9,12 @@ import org.springframework.context.annotation.Bean;
 class TestPdfRequestLimitsConfiguration {
     @Bean
     PdfRequestLimits pdfRequestLimits(
-            @Value("${test.pdf.limits.max-request-body-bytes:1048576}") long maxRequestBodyBytes) {
-        return new PdfRequestLimits(maxRequestBodyBytes, 100, 100_000, 25L * 1024L * 1024L);
+            @Value("${pdf.limits.max-request-body-bytes:1048576}") long maxRequestBodyBytes) {
+        PdfRequestLimits defaults = new PdfRequestLimits();
+        return new PdfRequestLimits(
+                maxRequestBodyBytes,
+                defaults.maxFields(),
+                defaults.maxTextCodePoints(),
+                defaults.maxGeneratedPdfBytes());
     }
 }
