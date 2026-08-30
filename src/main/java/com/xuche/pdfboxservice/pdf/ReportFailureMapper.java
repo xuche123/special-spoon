@@ -1,6 +1,5 @@
 package com.xuche.pdfboxservice.pdf;
 
-import java.io.UncheckedIOException;
 import org.springframework.http.HttpStatus;
 
 /** Maps internal report failures to the stable public HTTP error contract. */
@@ -67,10 +66,6 @@ final class ReportFailureMapper {
                     ReportError.simple(
                             "TEMPLATE_CONFIGURATION_INVALID",
                             "Template configuration is invalid."));
-        }
-        if (exception instanceof PdfRenderingFailedException
-                || exception instanceof UncheckedIOException) {
-            return renderingFailure(exception);
         }
         return renderingFailure(exception);
     }
