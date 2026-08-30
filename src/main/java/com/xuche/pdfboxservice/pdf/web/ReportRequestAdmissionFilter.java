@@ -1,6 +1,7 @@
 package com.xuche.pdfboxservice.pdf.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xuche.pdfboxservice.pdf.limits.PdfRequestLimits;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
@@ -12,7 +13,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -23,10 +23,8 @@ final class ReportRequestAdmissionFilter extends OncePerRequestFilter {
     private final long maxRequestBodyBytes;
     private final ObjectMapper objectMapper;
 
-    ReportRequestAdmissionFilter(
-            @Value("${pdf.limits.max-request-body-bytes:1048576}") long maxRequestBodyBytes,
-            ObjectMapper objectMapper) {
-        this.maxRequestBodyBytes = maxRequestBodyBytes;
+    ReportRequestAdmissionFilter(PdfRequestLimits limits, ObjectMapper objectMapper) {
+        this.maxRequestBodyBytes = limits.maxRequestBodyBytes();
         this.objectMapper = objectMapper;
     }
 
