@@ -1,6 +1,6 @@
 package com.xuche.pdfboxservice.pdf.web;
 
-import com.xuche.pdfboxservice.pdf.RequestLimitExceededException;
+import com.xuche.pdfboxservice.pdf.limits.RequestLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;

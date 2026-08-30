@@ -1,7 +1,5 @@
 package com.xuche.pdfboxservice.pdf.web;
 
-import com.xuche.pdfboxservice.pdf.TemplatePreviewDisabledException;
-import com.xuche.pdfboxservice.pdf.UnsupportedPreviewFormatException;
 import com.xuche.pdfboxservice.pdf.rendering.PdfReportService;
 import jakarta.validation.Valid;
 import java.util.Map;

@@ -3,8 +3,8 @@ package com.xuche.pdfboxservice.pdf.rendering;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.xuche.pdfboxservice.pdf.PdfRequestLimits;
-import com.xuche.pdfboxservice.pdf.RequestLimitExceededException;
+import com.xuche.pdfboxservice.pdf.limits.PdfRequestLimits;
+import com.xuche.pdfboxservice.pdf.limits.RequestLimitExceededException;
 import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties;
 import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties.FieldPlacement;
 import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties.FieldType;
