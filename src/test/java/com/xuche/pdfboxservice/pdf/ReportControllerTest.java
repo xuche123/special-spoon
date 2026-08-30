@@ -112,6 +112,79 @@ class ReportControllerTest {
     }
 
     @Test
+    void invalidFieldValueReturnsStructured400() throws Exception {
+        when(pdfReportService.generate(eq("report"), eq(null), anyMap()))
+                .thenThrow(
+                        new InvalidFieldValueException(
+                                "report", "v1", "title", "a JSON string", true));
+
+        mockMvc.perform(
+                        post("/api/reports/report")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fields\":{\"title\":true}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("FIELD_VALUE_TYPE_INVALID"))
+                .andExpect(jsonPath("$.templateName").value("report"))
+                .andExpect(jsonPath("$.version").value("v1"))
+                .andExpect(jsonPath("$.fieldName").value("title"));
+    }
+
+    @Test
+    void textOverflowReturnsStructured400() throws Exception {
+        when(pdfReportService.generate(eq("report"), eq(null), anyMap()))
+                .thenThrow(new TextOverflowException("report", "v1", "summary"));
+
+        mockMvc.perform(
+                        post("/api/reports/report")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fields\":{\"summary\":\"long text\"}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("TEXT_OVERFLOW"))
+                .andExpect(jsonPath("$.templateName").value("report"))
+                .andExpect(jsonPath("$.version").value("v1"))
+                .andExpect(jsonPath("$.fieldName").value("summary"));
+    }
+
+    @Test
+    void invalidConfigurationReturnsSafeStructured500() throws Exception {
+        when(pdfReportService.generate(eq("report"), eq(null), anyMap()))
+                .thenThrow(new IllegalStateException("internal configuration details"));
+
+        mockMvc.perform(
+                        post("/api/reports/report")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fields\":{}}"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("TEMPLATE_CONFIGURATION_INVALID"))
+                .andExpect(jsonPath("$.message").value("Template configuration is invalid."))
+                .andExpect(jsonPath("$.trace").doesNotExist());
+    }
+
+    @Test
+    void renderingFailureRetainsSafeContextAndHidesCause() throws Exception {
+        when(pdfReportService.generate(eq("report"), eq("v1"), anyMap()))
+                .thenThrow(
+                        new PdfRenderingFailedException(
+                                "report", "v1", new RuntimeException("secret")));
+
+        mockMvc.perform(
+                        post("/api/reports/report?version=v1")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fields\":{}}"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("PDF_RENDERING_FAILED"))
+                .andExpect(jsonPath("$.message").value("PDF rendering failed."))
+                .andExpect(jsonPath("$.templateName").value("report"))
+                .andExpect(jsonPath("$.version").value("v1"))
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(
+                        jsonPath("$.message")
+                                .value(
+                                        org.hamcrest.Matchers.not(
+                                                org.hamcrest.Matchers.containsString("secret"))));
+    }
+
+    @Test
     void missingFieldsReturns400() throws Exception {
         mockMvc.perform(
                         post("/api/reports/report")
