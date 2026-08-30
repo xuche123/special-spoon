@@ -24,4 +24,10 @@ public record ReportError(
     static ReportError simple(String code, String message) {
         return new ReportError(code, message, UUID.randomUUID().toString(), null, null, null);
     }
+
+    static ReportError requestLimitExceeded() {
+        return simple(
+                "REQUEST_LIMIT_EXCEEDED",
+                "The report request body exceeds the configured size limit.");
+    }
 }

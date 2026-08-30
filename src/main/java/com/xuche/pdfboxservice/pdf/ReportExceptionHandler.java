@@ -20,11 +20,7 @@ class ReportExceptionHandler {
     })
     ResponseEntity<ReportError> malformed(Exception exception) {
         if (hasCause(exception, RequestBodyLimitIOException.class)) {
-            return response(
-                    HttpStatus.PAYLOAD_TOO_LARGE,
-                    ReportError.simple(
-                            "REQUEST_LIMIT_EXCEEDED",
-                            "The report request body exceeds the configured size limit."));
+            return response(HttpStatus.PAYLOAD_TOO_LARGE, ReportError.requestLimitExceeded());
         }
         return response(
                 HttpStatus.BAD_REQUEST,

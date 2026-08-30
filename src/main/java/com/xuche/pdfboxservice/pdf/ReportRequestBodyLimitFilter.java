@@ -53,11 +53,7 @@ final class ReportRequestBodyLimitFilter extends OncePerRequestFilter {
     private void writeLimitExceeded(HttpServletResponse response) throws IOException {
         response.setStatus(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(
-                response.getWriter(),
-                ReportError.simple(
-                        "REQUEST_LIMIT_EXCEEDED",
-                        "The report request body exceeds the configured size limit."));
+        objectMapper.writeValue(response.getWriter(), ReportError.requestLimitExceeded());
     }
 
     private static final class LimitedBodyRequest extends HttpServletRequestWrapper {
@@ -92,7 +88,14 @@ final class ReportRequestBodyLimitFilter extends OncePerRequestFilter {
                                 return count;
                             }
 
-                            private void check(int count) throws RequestBodyLimitIOException {
+                            @Override
+                            public long skip(long count) throws IOException {
+                                long skipped = delegate.skip(count);
+                                if (skipped > 0) check(skipped);
+                                return skipped;
+                            }
+
+                            private void check(long count) throws RequestBodyLimitIOException {
                                 bytesRead += count;
                                 if (bytesRead > maxBytes) throw new RequestBodyLimitIOException();
                             }

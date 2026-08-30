@@ -46,7 +46,8 @@ class ReportRequestBodyLimitControllerTest {
                                 .content("{\"fields\":{\"title\":\"too large\"}}"))
                 .andExpect(status().isPayloadTooLarge())
                 .andExpect(jsonPath("$.code").value("REQUEST_LIMIT_EXCEEDED"))
-                .andExpect(jsonPath("$.requestId").isNotEmpty());
+                .andExpect(jsonPath("$.requestId").isNotEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist());
         verifyNoInteractions(pdfReportService);
     }
 
