@@ -31,7 +31,7 @@ public class InvalidFieldValueException extends ReportException {
     private static String describe(Object value) {
         return switch (value) {
             case null -> "null";
-            case String s -> "string \"" + s + "\"";
+            case String s -> "string";
             case Boolean b -> "boolean " + b;
             case Number n -> "number " + n;
             default -> value.getClass().getSimpleName();

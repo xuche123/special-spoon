@@ -19,6 +19,13 @@ class ReportExceptionHandler {
         HttpMediaTypeNotSupportedException.class
     })
     ResponseEntity<ReportError> malformed(Exception exception) {
+        if (hasCause(exception, RequestBodyLimitIOException.class)) {
+            return response(
+                    HttpStatus.PAYLOAD_TOO_LARGE,
+                    ReportError.simple(
+                            "REQUEST_LIMIT_EXCEEDED",
+                            "The report request body exceeds the configured size limit."));
+        }
         return response(
                 HttpStatus.BAD_REQUEST,
                 ReportError.simple("MALFORMED_REQUEST", "The report request is malformed."));
@@ -97,5 +104,12 @@ class ReportExceptionHandler {
 
     private ResponseEntity<ReportError> response(HttpStatus status, ReportError error) {
         return ResponseEntity.status(status).body(error);
+    }
+
+    private boolean hasCause(Throwable error, Class<? extends Throwable> type) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (type.isInstance(current)) return true;
+        }
+        return false;
     }
 }
