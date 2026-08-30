@@ -29,7 +29,8 @@ class ReportControllerTest {
     @Test
     void fillsTemplateAndReturnsPdf() throws Exception {
         byte[] pdf = "%PDF-1.7 fake".getBytes(StandardCharsets.UTF_8);
-        when(pdfReportService.fill(eq("report"), anyMap())).thenReturn(pdf);
+        when(pdfReportService.generate(eq("report"), eq(null), anyMap()))
+                .thenReturn(new PdfReportService.GeneratedReport(pdf, "v1"));
 
         mockMvc.perform(
                         post("/api/reports/report")
@@ -41,12 +42,13 @@ class ReportControllerTest {
                         header().string(
                                         HttpHeaders.CONTENT_DISPOSITION,
                                         containsString("report-filled.pdf")))
+                .andExpect(header().string("X-Template-Version", "v1"))
                 .andExpect(content().bytes(pdf));
     }
 
     @Test
     void unknownTemplateReturns404() throws Exception {
-        when(pdfReportService.fill(eq("nope"), anyMap()))
+        when(pdfReportService.generate(eq("nope"), eq(null), anyMap()))
                 .thenThrow(new TemplateNotFoundException("nope"));
 
         mockMvc.perform(
@@ -58,7 +60,7 @@ class ReportControllerTest {
 
     @Test
     void unknownFieldReturns400() throws Exception {
-        when(pdfReportService.fill(eq("report"), anyMap()))
+        when(pdfReportService.generate(eq("report"), eq(null), anyMap()))
                 .thenThrow(
                         new UnknownTemplateFieldException(
                                 "report", Set.of("bogus"), Set.of("title")));

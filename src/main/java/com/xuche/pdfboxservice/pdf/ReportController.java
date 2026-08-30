@@ -26,16 +26,12 @@ class ReportController {
             @Valid @RequestBody FillReportRequest request) {
         PdfReportService.GeneratedReport report =
                 pdfReportService.generate(templateName, version, request.fields());
-        byte[] pdf =
-                report == null
-                        ? pdfReportService.fill(templateName, request.fields())
-                        : report.pdfBytes();
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(
                         HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + templateName + "-filled.pdf\"")
-                .header("X-Template-Version", report == null ? "v1" : report.templateVersion())
-                .body(pdf);
+                .header("X-Template-Version", report.templateVersion())
+                .body(report.pdfBytes());
     }
 }
