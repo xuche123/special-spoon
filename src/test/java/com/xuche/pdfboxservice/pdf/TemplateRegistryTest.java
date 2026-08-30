@@ -23,6 +23,20 @@ class TemplateRegistryTest {
         return new Template(file, fields);
     }
 
+    private static Template versionedTemplate(String currentVersion) {
+        Template template = new Template();
+        template.setCurrentVersion(currentVersion);
+        template.setVersions(
+                Map.of(
+                        "v1",
+                                new PdfTemplateProperties.Version(
+                                        REPORT, Map.of("title", placement(1, 150f, 665f))),
+                        "v2",
+                                new PdfTemplateProperties.Version(
+                                        REPORT, Map.of("title", placement(1, 160f, 665f)))));
+        return template;
+    }
+
     private static FieldPlacement placement(int page, Float x, Float y) {
         return new FieldPlacement(page, x, y, null, null, null);
     }
@@ -43,6 +57,27 @@ class TemplateRegistryTest {
         ResolvedTemplate report = registry.get("report");
         assertThat(report.knownFields()).containsExactly("title");
         assertThat(report.placements()).containsOnlyKeys("title");
+    }
+
+    @Test
+    void resolvesTheConfiguredCurrentVersionWhenNoVersionIsRequested() {
+        TemplateRegistry registry = registryOf(Map.of("report", versionedTemplate("v2")));
+
+        assertThat(registry.get("report", null).version()).isEqualTo("v2");
+    }
+
+    @Test
+    void resolvesAnAvailableVersionWhenItIsRequestedExplicitly() {
+        TemplateRegistry registry = registryOf(Map.of("report", versionedTemplate("v2")));
+
+        assertThat(registry.get("report", "v1").version()).isEqualTo("v1");
+    }
+
+    @Test
+    void returnsNoResolutionForAnUnavailableVersion() {
+        TemplateRegistry registry = registryOf(Map.of("report", versionedTemplate("v2")));
+
+        assertThat(registry.get("report", "v3")).isNull();
     }
 
     @Test

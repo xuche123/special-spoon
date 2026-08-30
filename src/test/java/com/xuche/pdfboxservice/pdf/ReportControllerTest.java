@@ -64,6 +64,22 @@ class ReportControllerTest {
     }
 
     @Test
+    void unavailableTemplateVersionReturnsStructured404() throws Exception {
+        when(pdfReportService.generate(eq("report"), eq("v3"), anyMap()))
+                .thenThrow(new TemplateVersionNotFoundException("report", "v3"));
+
+        mockMvc.perform(
+                        post("/api/reports/report?version=v3")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fields\":{}}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("TEMPLATE_VERSION_NOT_FOUND"))
+                .andExpect(jsonPath("$.templateName").value("report"))
+                .andExpect(jsonPath("$.version").value("v3"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
     void unknownFieldReturns400() throws Exception {
         when(pdfReportService.generate(eq("report"), eq(null), anyMap()))
                 .thenThrow(
