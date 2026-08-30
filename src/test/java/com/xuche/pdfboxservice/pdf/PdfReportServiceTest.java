@@ -333,6 +333,14 @@ class PdfReportServiceTest {
     }
 
     @Test
+    void unavailableTemplateVersionThrowsVersionNotFound() {
+        assertThatThrownBy(() -> service.generate("report", "v2", Map.of()))
+                .isInstanceOf(TemplateVersionNotFoundException.class)
+                .hasMessageContaining("report")
+                .hasMessageContaining("v2");
+    }
+
+    @Test
     void rejectsTemplateNamesThatCouldEscapeTheTemplateDirectory() {
         assertThatThrownBy(() -> service.fill("../application", Map.of()))
                 .isInstanceOf(TemplateNotFoundException.class);
