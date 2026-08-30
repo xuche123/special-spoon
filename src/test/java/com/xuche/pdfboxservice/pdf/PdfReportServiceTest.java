@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.FieldPlacement;
 import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.FieldType;
 import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.Template;
+import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.TextAlignment;
+import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.TextOverflow;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -164,6 +166,67 @@ class PdfReportServiceTest {
             // Configured size is 28 with maxWidth 432; the long name must have been shrunk.
             assertThat(nameFontSizes).isNotEmpty().allMatch(size -> size < 28f);
         }
+    }
+
+    @Test
+    void wrapsMultilineTextWithinItsConfiguredWidth() throws Exception {
+        Map<String, FieldPlacement> fields =
+                Map.of(
+                        "summary",
+                        new FieldPlacement(
+                                1,
+                                150f,
+                                665f,
+                                12f,
+                                75f,
+                                40f,
+                                14f,
+                                TextAlignment.LEFT,
+                                TextOverflow.REJECT,
+                                null));
+        PdfTemplateProperties properties =
+                new PdfTemplateProperties(
+                        Map.of("report", new Template("classpath:templates/report.pdf", fields)));
+        PdfReportService multilineService =
+                new PdfReportService(new TemplateRegistry(properties, new DefaultResourceLoader()));
+
+        byte[] pdf = multilineService.fill("report", Map.of("summary", "alpha beta gamma delta"));
+
+        try (PDDocument filled = Loader.loadPDF(pdf)) {
+            String text = new PDFTextStripper().getText(filled);
+            assertThat(text).contains("alpha beta").contains("gamma delta");
+        }
+    }
+
+    @Test
+    void rejectsMultilineTextThatExceedsConfiguredHeight() {
+        Map<String, FieldPlacement> fields =
+                Map.of(
+                        "summary",
+                        new FieldPlacement(
+                                1,
+                                150f,
+                                665f,
+                                12f,
+                                100f,
+                                10f,
+                                14f,
+                                TextAlignment.LEFT,
+                                TextOverflow.REJECT,
+                                null));
+        PdfTemplateProperties properties =
+                new PdfTemplateProperties(
+                        Map.of("report", new Template("classpath:templates/report.pdf", fields)));
+        PdfReportService multilineService =
+                new PdfReportService(new TemplateRegistry(properties, new DefaultResourceLoader()));
+
+        assertThatThrownBy(
+                        () ->
+                                multilineService.fill(
+                                        "report", Map.of("summary", "alpha beta gamma")))
+                .isInstanceOf(TextOverflowException.class)
+                .hasMessageContaining("summary")
+                .hasMessageContaining("report");
     }
 
     @Test

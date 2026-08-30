@@ -71,6 +71,16 @@ pdf:
           y: 665                           # baseline of the value
           font-size: 14                    # default 12
           max-width: 400                   # optional: text wider than this is shrunk to fit
+        summary:
+          page: 1
+          x: 150
+          y: 525
+          font-size: 12
+          max-width: 400
+          max-height: 80                  # enables multiline wrapping
+          line-height: 14                 # optional: defaults to 1.2 * font-size
+          alignment: left                 # left (default) | center | right
+          overflow: reject                # currently the only supported policy
         confidential:
           page: 2
           x: 73
@@ -95,6 +105,13 @@ is what request validation uses to reject unknown names with `400`.
 | ---- | --------- |
 | text (default) | value drawn at `page/x/y`, optionally shrunk proportionally to fit `max-width` |
 | checkbox | `X` drawn at `page/x/y` when the value is `true`; nothing when `false` |
+
+Text fields become **multiline text fields** when both `max-width` and `max-height` are configured.
+Text wraps at whitespace, explicit `\\n` characters force line breaks, and overlong words are split
+when possible. The first line uses the configured `y` baseline; later lines move downward by
+`line-height`. `left`, `center`, and `right` alignment are applied independently to each line.
+Content that cannot fit within the configured width or height is rejected with `400`; it is never
+silently truncated.
 
 ### Adding a new template
 

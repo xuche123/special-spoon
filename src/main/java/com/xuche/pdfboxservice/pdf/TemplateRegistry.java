@@ -37,17 +37,25 @@ class TemplateRegistry {
     private final Map<String, ResolvedTemplate> templates;
 
     TemplateRegistry(PdfTemplateProperties properties, ResourceLoader resourceLoader) {
+        this.templates = resolveConfiguredTemplates(properties.templates(), resourceLoader);
+    }
+
+    /** Returns the template, or {@code null} if the name is not in the supported list. */
+    ResolvedTemplate get(String name) {
+        return templates.get(name);
+    }
+
+    private Map<String, ResolvedTemplate> resolveConfiguredTemplates(
+            Map<String, PdfTemplateProperties.Template> configuredTemplates,
+            ResourceLoader resourceLoader) {
         Map<String, ResolvedTemplate> resolved = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
         for (Map.Entry<String, PdfTemplateProperties.Template> entry :
-                properties.templates().entrySet()) {
+                configuredTemplates.entrySet()) {
             try {
-                if (!TEMPLATE_NAME.matcher(entry.getKey()).matches()) {
-                    throw new IllegalStateException(
-                            "template name must match " + TEMPLATE_NAME.pattern());
-                }
                 resolved.put(
-                        entry.getKey(), resolve(entry.getKey(), entry.getValue(), resourceLoader));
+                        entry.getKey(),
+                        resolveTemplate(entry.getKey(), entry.getValue(), resourceLoader));
             } catch (IllegalStateException | UncheckedIOException e) {
                 errors.add("pdf.templates." + entry.getKey() + ": " + e.getMessage());
             }
@@ -56,16 +64,12 @@ class TemplateRegistry {
             throw new IllegalStateException(
                     "Invalid template configuration:\n - " + String.join("\n - ", errors));
         }
-        this.templates = Map.copyOf(resolved);
+        return Map.copyOf(resolved);
     }
 
-    /** Returns the template, or {@code null} if the name is not in the supported list. */
-    ResolvedTemplate get(String name) {
-        return templates.get(name);
-    }
-
-    private ResolvedTemplate resolve(
+    private ResolvedTemplate resolveTemplate(
             String name, PdfTemplateProperties.Template template, ResourceLoader resourceLoader) {
+        validateTemplateName(name);
         Resource pdf = resourceLoader.getResource(template.file());
         if (!pdf.exists()) {
             throw new IllegalStateException("PDF file not found: " + template.file());
@@ -105,6 +109,12 @@ class TemplateRegistry {
         }
     }
 
+    private void validateTemplateName(String name) {
+        if (!TEMPLATE_NAME.matcher(name).matches()) {
+            throw new IllegalStateException("template name must match " + TEMPLATE_NAME.pattern());
+        }
+    }
+
     private PdfTemplateProperties.FieldPlacement validatePlacement(
             String fieldName, PdfTemplateProperties.FieldPlacement placement, int pageCount) {
         if (fieldName.isBlank()) {
@@ -122,6 +132,17 @@ class TemplateRegistry {
         }
         if (placement.x() == null || placement.y() == null) {
             throw new IllegalStateException("field '" + fieldName + "': x and y are required");
+        }
+        if (placement.maxHeight() != null && placement.maxWidth() == null) {
+            throw new IllegalStateException(
+                    "field '" + fieldName + "': maxHeight requires maxWidth");
+        }
+        if (placement.lineHeight() != null
+                && (placement.maxWidth() == null || placement.maxHeight() == null)) {
+            throw new IllegalStateException(
+                    "field '"
+                            + fieldName
+                            + "': lineHeight requires maxWidth and maxHeight for a multiline text field");
         }
         if (placement.fontSize() != null && placement.fontSize() <= 0) {
             throw new IllegalStateException("field '" + fieldName + "': fontSize must be positive");

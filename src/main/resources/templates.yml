@@ -32,6 +32,10 @@ pdf:
           y: 525
           font-size: 12
           max-width: 400
+          max-height: 80
+          line-height: 14
+          alignment: left
+          overflow: reject
         confidential:
           page: 2
           x: 73

@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.FieldPlacement;
 import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.Template;
+import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.TextAlignment;
+import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.TextOverflow;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.DefaultResourceLoader;
@@ -112,6 +114,58 @@ class TemplateRegistryTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("recipient")
                 .hasMessageContaining("x and y are required");
+    }
+
+    @Test
+    void failsWhenMultilinePlacementHasHeightWithoutWidth() {
+        assertThatThrownBy(
+                        () ->
+                                registryOf(
+                                        Map.of(
+                                                "report",
+                                                template(
+                                                        REPORT,
+                                                        Map.of(
+                                                                "summary",
+                                                                new FieldPlacement(
+                                                                        1,
+                                                                        150f,
+                                                                        525f,
+                                                                        12f,
+                                                                        null,
+                                                                        80f,
+                                                                        null,
+                                                                        TextAlignment.LEFT,
+                                                                        TextOverflow.REJECT,
+                                                                        null))))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("maxHeight requires maxWidth");
+    }
+
+    @Test
+    void failsWhenLineHeightIsConfiguredWithoutMultilineBounds() {
+        assertThatThrownBy(
+                        () ->
+                                registryOf(
+                                        Map.of(
+                                                "report",
+                                                template(
+                                                        REPORT,
+                                                        Map.of(
+                                                                "summary",
+                                                                new FieldPlacement(
+                                                                        1,
+                                                                        150f,
+                                                                        525f,
+                                                                        12f,
+                                                                        400f,
+                                                                        null,
+                                                                        16f,
+                                                                        TextAlignment.LEFT,
+                                                                        TextOverflow.REJECT,
+                                                                        null))))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("lineHeight requires maxWidth and maxHeight");
     }
 
     @Test

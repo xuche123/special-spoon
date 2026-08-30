@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.validation.annotation.Validated;
 
 /**
@@ -45,6 +46,11 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
      * @param y baseline of the value, in points
      * @param fontSize default 12; shrunk proportionally if {@code maxWidth} is exceeded
      * @param maxWidth optional maximum rendered width in points
+     * @param maxHeight optional maximum number of vertical points for a multiline text field
+     * @param lineHeight vertical distance between multiline baselines; defaults to 1.2 times font
+     *     size
+     * @param alignment horizontal alignment for multiline text fields
+     * @param overflow overflow policy for multiline text fields
      * @param type how to render the value; default {@link FieldType#TEXT}
      */
     public record FieldPlacement(
@@ -53,12 +59,32 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
             @NotNull Float y,
             @Positive Float fontSize,
             @Positive Float maxWidth,
+            @Positive Float maxHeight,
+            @Positive Float lineHeight,
+            TextAlignment alignment,
+            TextOverflow overflow,
             FieldType type) {
 
+        @ConstructorBinding
         public FieldPlacement {
             if (type == null) {
                 type = FieldType.TEXT;
             }
+            if (alignment == null) {
+                alignment = TextAlignment.LEFT;
+            }
+            if (overflow == null) {
+                overflow = TextOverflow.REJECT;
+            }
+            if (maxHeight != null && lineHeight == null) {
+                float configuredFontSize = fontSize != null ? fontSize : 12f;
+                lineHeight = configuredFontSize * 1.2f;
+            }
+        }
+
+        public FieldPlacement(
+                Integer page, Float x, Float y, Float fontSize, Float maxWidth, FieldType type) {
+            this(page, x, y, fontSize, maxWidth, null, null, null, null, type);
         }
     }
 
@@ -71,5 +97,17 @@ public record PdfTemplateProperties(@NotEmpty Map<String, @Valid Template> templ
          * "false"}.
          */
         CHECKBOX
+    }
+
+    /** Horizontal alignment for a multiline text field. */
+    public enum TextAlignment {
+        LEFT,
+        CENTER,
+        RIGHT
+    }
+
+    /** Overflow behavior for a multiline text field. */
+    public enum TextOverflow {
+        REJECT
     }
 }
