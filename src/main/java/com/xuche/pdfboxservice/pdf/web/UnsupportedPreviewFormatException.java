@@ -1,4 +1,4 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.web;
 
 /** Thrown when a preview format other than PDF or JSON is requested. */
 public class UnsupportedPreviewFormatException extends RuntimeException {

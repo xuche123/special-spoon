@@ -1,7 +1,7 @@
 package com.xuche.pdfboxservice.pdf.rendering;
 
-import com.xuche.pdfboxservice.pdf.PdfRequestLimits;
-import com.xuche.pdfboxservice.pdf.RequestLimitExceededException;
+import com.xuche.pdfboxservice.pdf.limits.PdfRequestLimits;
+import com.xuche.pdfboxservice.pdf.limits.RequestLimitExceededException;
 import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties;
 import com.xuche.pdfboxservice.pdf.template.ResolvedTemplate;
 import com.xuche.pdfboxservice.pdf.template.TemplateNotFoundException;

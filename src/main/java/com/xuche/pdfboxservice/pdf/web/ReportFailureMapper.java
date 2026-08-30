@@ -1,9 +1,6 @@
 package com.xuche.pdfboxservice.pdf.web;
 
-import com.xuche.pdfboxservice.pdf.RequestBodyLimitIOException;
-import com.xuche.pdfboxservice.pdf.RequestLimitExceededException;
-import com.xuche.pdfboxservice.pdf.TemplatePreviewDisabledException;
-import com.xuche.pdfboxservice.pdf.UnsupportedPreviewFormatException;
+import com.xuche.pdfboxservice.pdf.limits.RequestLimitExceededException;
 import com.xuche.pdfboxservice.pdf.rendering.InvalidFieldValueException;
 import com.xuche.pdfboxservice.pdf.rendering.PdfRenderingFailedException;
 import com.xuche.pdfboxservice.pdf.rendering.TextOverflowException;
