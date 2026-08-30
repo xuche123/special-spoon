@@ -88,6 +88,25 @@ class TemplateRegistryTest {
     }
 
     @Test
+    void rejectsMalformedConfiguredFontAtStartup() {
+        assertThatThrownBy(
+                        () ->
+                                new TemplateRegistry(
+                                        new PdfTemplateProperties(
+                                                Map.of(
+                                                        "report",
+                                                        new Template(
+                                                                REPORT,
+                                                                "classpath:templates/bad.ttf",
+                                                                Map.of(
+                                                                        "title",
+                                                                        placement(1, 1f, 1f))))),
+                                        location -> "not a font".getBytes()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not a valid TTF resource");
+    }
+
+    @Test
     void failsWhenTemplateHasAnAcroForm() {
         assertThatThrownBy(
                         () ->

@@ -40,7 +40,7 @@ class PdfReportService {
 
     /**
      * Standard-14 Helvetica: needs no embedding, but is limited to WinAnsi (Latin) characters. For
-     * broader scripts, embed a TTF/OTF with {@code PDType0Font} instead.
+     * broader scripts, configure a classpath TTF with {@code PDType0Font} instead.
      */
     private static final PDType1Font DEFAULT_FONT =
             new PDType1Font(Standard14Fonts.FontName.HELVETICA);
@@ -246,14 +246,16 @@ class PdfReportService {
             throws IOException {
         List<String> parts = new ArrayList<>();
         String current = "";
-        for (int offset = 0; offset < word.length(); offset++) {
-            String candidate = current + word.charAt(offset);
+        for (int offset = 0; offset < word.length(); ) {
+            int codePoint = word.codePointAt(offset);
+            String candidate = current + new String(Character.toChars(codePoint));
             if (!current.isEmpty() && textWidth(font, candidate, fontSize) > maxWidth) {
                 parts.add(current);
-                current = String.valueOf(word.charAt(offset));
+                current = new String(Character.toChars(codePoint));
             } else {
                 current = candidate;
             }
+            offset += Character.charCount(codePoint);
         }
         if (!current.isEmpty()) {
             parts.add(current);
