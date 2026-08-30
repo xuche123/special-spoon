@@ -1,6 +1,6 @@
 package com.xuche.pdfboxservice.pdf.web;
 
-import com.xuche.pdfboxservice.pdf.PdfReportService;
+import com.xuche.pdfboxservice.pdf.rendering.PdfReportService;
 import java.util.List;
 
 /** Machine-readable description of a rendered template preview. */

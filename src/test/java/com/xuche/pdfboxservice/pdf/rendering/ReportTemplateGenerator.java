@@ -1,4 +1,4 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.rendering;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,7 +33,7 @@ import org.apache.pdfbox.pdmodel.interactive.form.PDTextField;
  * <pre>
  * ./mvnw -q test-compile org.codehaus.mojo:exec-maven-plugin:3.5.0:java \
  *     -Dexec.classpathScope=test \
- *     -Dexec.mainClass=com.xuche.pdfboxservice.pdf.ReportTemplateGenerator
+ *     -Dexec.mainClass=com.xuche.pdfboxservice.pdf.rendering.ReportTemplateGenerator
  * </pre>
  */
 public final class ReportTemplateGenerator {

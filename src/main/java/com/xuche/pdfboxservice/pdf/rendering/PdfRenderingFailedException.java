@@ -1,4 +1,6 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.rendering;
+
+import com.xuche.pdfboxservice.pdf.ReportException;
 
 /** Internal rendering failure whose response deliberately omits the cause. */
 public final class PdfRenderingFailedException extends ReportException {

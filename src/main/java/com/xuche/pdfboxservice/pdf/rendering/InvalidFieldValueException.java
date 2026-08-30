@@ -1,4 +1,6 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.rendering;
+
+import com.xuche.pdfboxservice.pdf.ReportException;
 
 /** Thrown when a field value has the wrong JSON type for the field's type. */
 public class InvalidFieldValueException extends ReportException {

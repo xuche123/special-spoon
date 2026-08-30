@@ -1,4 +1,6 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.rendering;
+
+import com.xuche.pdfboxservice.pdf.ReportException;
 
 /** Thrown when a multiline text field cannot contain its value within its configured bounds. */
 public class TextOverflowException extends ReportException {

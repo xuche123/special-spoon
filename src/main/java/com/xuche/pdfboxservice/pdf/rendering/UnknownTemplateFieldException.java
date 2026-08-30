@@ -1,5 +1,6 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.rendering;
 
+import com.xuche.pdfboxservice.pdf.ReportException;
 import java.util.Set;
 import java.util.TreeSet;
 

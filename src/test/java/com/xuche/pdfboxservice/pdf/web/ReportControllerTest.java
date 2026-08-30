@@ -10,12 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.xuche.pdfboxservice.pdf.InvalidFieldValueException;
-import com.xuche.pdfboxservice.pdf.PdfRenderingFailedException;
-import com.xuche.pdfboxservice.pdf.PdfReportService;
-import com.xuche.pdfboxservice.pdf.TextOverflowException;
-import com.xuche.pdfboxservice.pdf.UnknownTemplateFieldException;
-import com.xuche.pdfboxservice.pdf.UnsupportedGlyphException;
+import com.xuche.pdfboxservice.pdf.rendering.InvalidFieldValueException;
+import com.xuche.pdfboxservice.pdf.rendering.PdfRenderingFailedException;
+import com.xuche.pdfboxservice.pdf.rendering.PdfReportService;
+import com.xuche.pdfboxservice.pdf.rendering.TextOverflowException;
+import com.xuche.pdfboxservice.pdf.rendering.UnknownTemplateFieldException;
+import com.xuche.pdfboxservice.pdf.rendering.UnsupportedGlyphException;
 import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties;
 import com.xuche.pdfboxservice.pdf.template.TemplateNotFoundException;
 import com.xuche.pdfboxservice.pdf.template.TemplateVersionNotFoundException;
