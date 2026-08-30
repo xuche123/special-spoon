@@ -1,13 +1,19 @@
 package com.xuche.pdfboxservice.pdf;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -15,21 +21,43 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 final class ReportRequestBodyLimitFilter extends OncePerRequestFilter {
     private final long maxRequestBodyBytes;
+    private final ObjectMapper objectMapper;
 
     ReportRequestBodyLimitFilter(
-            @Value("${pdf.limits.max-request-body-bytes:1048576}") long maxRequestBodyBytes) {
+            @Value("${pdf.limits.max-request-body-bytes:1048576}") long maxRequestBodyBytes,
+            ObjectMapper objectMapper) {
         this.maxRequestBodyBytes = maxRequestBodyBytes;
+        this.objectMapper = objectMapper;
     }
 
     @Override
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        if (!request.getRequestURI().startsWith("/api/reports/")) {
+        if (!isReportIntake(request)) {
             filterChain.doFilter(request, response);
             return;
         }
+        if (request.getContentLengthLong() > maxRequestBodyBytes) {
+            writeLimitExceeded(response);
+            return;
+        }
         filterChain.doFilter(new LimitedBodyRequest(request, maxRequestBodyBytes), response);
+    }
+
+    private boolean isReportIntake(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri.startsWith("/api/reports/") || uri.startsWith("/api/template-previews/");
+    }
+
+    private void writeLimitExceeded(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        objectMapper.writeValue(
+                response.getWriter(),
+                ReportError.simple(
+                        "REQUEST_LIMIT_EXCEEDED",
+                        "The report request body exceeds the configured size limit."));
     }
 
     private static final class LimitedBodyRequest extends HttpServletRequestWrapper {
@@ -86,6 +114,14 @@ final class ReportRequestBodyLimitFilter extends OncePerRequestFilter {
                         };
             }
             return limitedInputStream;
+        }
+
+        @Override
+        public BufferedReader getReader() throws IOException {
+            String encoding = getCharacterEncoding();
+            Charset charset =
+                    encoding == null ? StandardCharsets.ISO_8859_1 : Charset.forName(encoding);
+            return new BufferedReader(new InputStreamReader(getInputStream(), charset));
         }
     }
 }
