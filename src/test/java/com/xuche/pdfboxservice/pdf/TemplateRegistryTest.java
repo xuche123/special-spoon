@@ -63,14 +63,18 @@ class TemplateRegistryTest {
     void resolvesTheConfiguredCurrentVersionWhenNoVersionIsRequested() {
         TemplateRegistry registry = registryOf(Map.of("report", versionedTemplate("v2")));
 
-        assertThat(registry.get("report", null).version()).isEqualTo("v2");
+        ResolvedTemplate resolved = registry.get("report", null);
+        assertThat(resolved.version()).isEqualTo("v2");
+        assertThat(resolved.placements().get("title").x()).isEqualTo(160f);
     }
 
     @Test
     void resolvesAnAvailableVersionWhenItIsRequestedExplicitly() {
         TemplateRegistry registry = registryOf(Map.of("report", versionedTemplate("v2")));
 
-        assertThat(registry.get("report", "v1").version()).isEqualTo("v1");
+        ResolvedTemplate resolved = registry.get("report", "v1");
+        assertThat(resolved.version()).isEqualTo("v1");
+        assertThat(resolved.placements().get("title").x()).isEqualTo(150f);
     }
 
     @Test
