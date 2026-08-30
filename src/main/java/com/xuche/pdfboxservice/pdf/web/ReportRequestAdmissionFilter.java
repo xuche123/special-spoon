@@ -1,6 +1,7 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xuche.pdfboxservice.pdf.RequestBodyLimitIOException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
@@ -19,11 +20,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 /** Enforces the request-body limit even when the client does not send Content-Length. */
 @Component
-final class ReportRequestBodyLimitFilter extends OncePerRequestFilter {
+final class ReportRequestAdmissionFilter extends OncePerRequestFilter {
     private final long maxRequestBodyBytes;
     private final ObjectMapper objectMapper;
 
-    ReportRequestBodyLimitFilter(
+    ReportRequestAdmissionFilter(
             @Value("${pdf.limits.max-request-body-bytes:1048576}") long maxRequestBodyBytes,
             ObjectMapper objectMapper) {
         this.maxRequestBodyBytes = maxRequestBodyBytes;

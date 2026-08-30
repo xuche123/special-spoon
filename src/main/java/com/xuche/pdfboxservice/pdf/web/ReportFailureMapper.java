@@ -1,5 +1,16 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.web;
 
+import com.xuche.pdfboxservice.pdf.InvalidFieldValueException;
+import com.xuche.pdfboxservice.pdf.PdfRenderingFailedException;
+import com.xuche.pdfboxservice.pdf.RequestBodyLimitIOException;
+import com.xuche.pdfboxservice.pdf.RequestLimitExceededException;
+import com.xuche.pdfboxservice.pdf.TemplateNotFoundException;
+import com.xuche.pdfboxservice.pdf.TemplatePreviewDisabledException;
+import com.xuche.pdfboxservice.pdf.TemplateVersionNotFoundException;
+import com.xuche.pdfboxservice.pdf.TextOverflowException;
+import com.xuche.pdfboxservice.pdf.UnknownTemplateFieldException;
+import com.xuche.pdfboxservice.pdf.UnsupportedGlyphException;
+import com.xuche.pdfboxservice.pdf.UnsupportedPreviewFormatException;
 import org.springframework.http.HttpStatus;
 
 /** Maps internal report failures to the stable public HTTP error contract. */

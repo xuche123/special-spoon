@@ -1,5 +1,8 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.web;
 
+import com.xuche.pdfboxservice.pdf.PdfReportService;
+import com.xuche.pdfboxservice.pdf.TemplatePreviewDisabledException;
+import com.xuche.pdfboxservice.pdf.UnsupportedPreviewFormatException;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
