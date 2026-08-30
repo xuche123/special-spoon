@@ -14,4 +14,20 @@ public record ResolvedTemplate(
         byte[] fontBytes,
         String font,
         Set<String> knownFields,
-        Map<String, PdfTemplateProperties.FieldPlacement> placements) {}
+        Map<String, PdfTemplateProperties.FieldPlacement> placements) {
+
+    public ResolvedTemplate {
+        pdfBytes = pdfBytes.clone();
+        fontBytes = fontBytes == null ? null : fontBytes.clone();
+    }
+
+    @Override
+    public byte[] pdfBytes() {
+        return pdfBytes.clone();
+    }
+
+    @Override
+    public byte[] fontBytes() {
+        return fontBytes == null ? null : fontBytes.clone();
+    }
+}

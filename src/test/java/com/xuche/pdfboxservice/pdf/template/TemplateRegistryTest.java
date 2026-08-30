@@ -96,6 +96,23 @@ class TemplateRegistryTest {
     }
 
     @Test
+    void keepsResolvedTemplateBytesImmutable() {
+        ResolvedTemplate resolved =
+                registryOf(
+                                Map.of(
+                                        "report",
+                                        template(
+                                                REPORT, Map.of("title", placement(1, 150f, 665f)))))
+                        .get("report");
+        byte originalByte = resolved.pdfBytes()[0];
+
+        byte[] exposedBytes = resolved.pdfBytes();
+        exposedBytes[0] = (byte) (originalByte + 1);
+
+        assertThat(resolved.pdfBytes()[0]).isEqualTo(originalByte);
+    }
+
+    @Test
     void rejectsMissingConfiguredFont() {
         assertThatThrownBy(
                         () ->
