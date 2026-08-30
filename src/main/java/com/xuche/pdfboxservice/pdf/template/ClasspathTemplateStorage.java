@@ -1,4 +1,4 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.template;
 
 import java.io.IOException;
 import org.springframework.core.io.ResourceLoader;

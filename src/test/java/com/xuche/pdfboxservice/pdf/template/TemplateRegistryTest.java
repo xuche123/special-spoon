@@ -1,12 +1,12 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.template;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.FieldPlacement;
-import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.Template;
-import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.TextAlignment;
-import com.xuche.pdfboxservice.pdf.PdfTemplateProperties.TextOverflow;
+import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties.FieldPlacement;
+import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties.Template;
+import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties.TextAlignment;
+import com.xuche.pdfboxservice.pdf.template.PdfTemplateProperties.TextOverflow;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.DefaultResourceLoader;
@@ -93,6 +93,23 @@ class TemplateRegistryTest {
                                 new Template(
                                         REPORT, FONT, Map.of("title", placement(1, 150f, 665f)))));
         assertThat(registry.get("report").fontBytes()).isNotEmpty();
+    }
+
+    @Test
+    void keepsResolvedTemplateBytesImmutable() {
+        ResolvedTemplate resolved =
+                registryOf(
+                                Map.of(
+                                        "report",
+                                        template(
+                                                REPORT, Map.of("title", placement(1, 150f, 665f)))))
+                        .get("report");
+        byte originalByte = resolved.pdfBytes()[0];
+
+        byte[] exposedBytes = resolved.pdfBytes();
+        exposedBytes[0] = (byte) (originalByte + 1);
+
+        assertThat(resolved.pdfBytes()[0]).isEqualTo(originalByte);
     }
 
     @Test
