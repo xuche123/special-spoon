@@ -1,4 +1,6 @@
-package com.xuche.pdfboxservice.pdf;
+package com.xuche.pdfboxservice.pdf.rendering;
+
+import com.xuche.pdfboxservice.pdf.ReportException;
 
 /** Raised when a configured template font cannot represent input text. */
 public final class UnsupportedGlyphException extends ReportException {
